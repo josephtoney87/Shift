@@ -25,7 +25,20 @@ export enum TaskPriority {
   URGENT = 'urgent'
 }
 
+export enum ViewMode {
+  MY_VIEW = 'my_view',
+  ALL_DATA = 'all_data'
+}
+
 // Interface definitions
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  color: string;
+  createdAt: string;
+}
+
 export interface Shift {
   id: string;
   type: ShiftType;
@@ -38,6 +51,7 @@ export interface Worker {
   name: string;
   role: WorkerRole;
   shiftId: string;
+  isManual?: boolean;
 }
 
 export interface Part {
@@ -61,6 +75,7 @@ export interface Task {
   carriedOverFromTaskId?: string;
   createdAt: string;
   updatedAt: string;
+  createdBy?: string; // User ID who created the task
 }
 
 export interface TaskTimeLog {

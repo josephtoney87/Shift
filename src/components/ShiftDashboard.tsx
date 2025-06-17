@@ -5,6 +5,7 @@ import {
   RotateCcw, LayoutGrid, AlertTriangle
 } from 'lucide-react';
 import { useShopStore } from '../store/useShopStore';
+import { ViewMode } from '../types';
 import ShiftHeader from './ShiftHeader';
 import ShiftColumn from './ShiftColumn';
 import TaskModal from './TaskModal';
@@ -16,21 +17,24 @@ import CalendarView from './CalendarView';
 import SearchBar from './SearchBar';
 import NotesExporter from './NotesExporter';
 import ShiftNotesPanel from './ShiftNotesPanel';
+import UserSelector from './UserSelector';
 
 const ShiftDashboard: React.FC = () => {
   const { 
     shifts, 
     workers, 
-    tasks,
     parts,
     taskTimeLogs,
     selectedDate,
     selectedTaskId,
     isTaskModalOpen,
+    currentUser,
+    viewMode,
     setSelectedDate,
     setSelectedTaskId,
     setTaskModalOpen,
     getTaskSummaryForDate,
+    getFilteredTasks,
     moveTaskToShift,
     carryOverTask,
     getCarriedOverTasks,
@@ -50,7 +54,10 @@ const ShiftDashboard: React.FC = () => {
   const taskSummary = getTaskSummaryForDate(currentDate);
   const isFutureDate = isAfter(startOfDay(new Date(currentDate)), startOfDay(new Date()));
   
-  const expandedTasks = tasks
+  // Get filtered tasks based on view mode
+  const filteredTasks = getFilteredTasks();
+  
+  const expandedTasks = filteredTasks
     .filter(task => task.createdAt.startsWith(currentDate))
     .map(task => {
       const part = parts.find(p => p.id === task.partId);
@@ -197,7 +204,16 @@ const ShiftDashboard: React.FC = () => {
               </button>
               <SearchBar onSearchResult={handleSearchResult} />
             </div>
-            <div className="flex items-center space-x-4">
+            
+            {/* User Selector and View Controls */}
+            <UserSelector />
+          </div>
+        </div>
+
+        {/* Date and Status Info */}
+        <div className="bg-white border-b border-neutral-200 px-4 py-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
               <div className="flex items-center">
                 <span className={getDateClassName()}>
                   {format(parseISO(currentDate), 'MMMM d, yyyy')}
@@ -219,6 +235,26 @@ const ShiftDashboard: React.FC = () => {
                   </div>
                 )}
               </div>
+              
+              {/* Current User and View Mode */}
+              {currentUser && (
+                <div className="ml-4 flex items-center space-x-2 text-sm text-neutral-600">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-medium"
+                    style={{ backgroundColor: currentUser.color }}
+                  >
+                    {currentUser.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  </div>
+                  <span>{currentUser.name}</span>
+                  <span>•</span>
+                  <span className="font-medium">
+                    {viewMode === ViewMode.MY_VIEW ? 'My View' : 'All Data'}
+                  </span>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center space-x-4">
               <NotesExporter date={currentDate} />
               <button
                 onClick={() => setShowSimpleView(true)}
@@ -313,11 +349,14 @@ const ShiftDashboard: React.FC = () => {
               <div className="text-center">
                 <Calendar className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-neutral-700 mb-2">
-                  {isFutureDate ? 'Plan Ahead' : 'No Tasks Scheduled'}
+                  {isFutureDate ? 'Plan Ahead' : 
+                   viewMode === ViewMode.MY_VIEW ? 'No Personal Tasks' : 'No Tasks Scheduled'}
                 </h3>
                 <p className="text-neutral-500 max-w-md">
                   {isFutureDate
                     ? `Schedule tasks for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Task" buttons above to get started.`
+                    : viewMode === ViewMode.MY_VIEW
+                    ? `You have no tasks scheduled for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Task" buttons above to create a task, or switch to "All Data" view to see tasks from other users.`
                     : `There are no tasks scheduled for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Task" buttons above to schedule a task for this date.`
                   }
                 </p>
@@ -359,6 +398,8 @@ const ShiftDashboard: React.FC = () => {
       {!isFutureDate && showStartOfShiftChecklist && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 overflow-auto">
           <StartOfShiftChecklist
+            shiftId={shifts[0].id}
+            selectedDate={currentDate}
             onComplete={() => setShowStartOfShiftChecklist(false)}
           />
         </div>
@@ -367,6 +408,8 @@ const ShiftDashboard: React.FC = () => {
       {!isFutureDate && showEndOfShiftCleanup && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 overflow-auto">
           <EndOfShiftCleanup
+            shiftId={shifts[0].id}
+            selectedDate={currentDate}
             onComplete={() => setShowEndOfShiftCleanup(false)}
           />
         </div>

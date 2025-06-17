@@ -2,12 +2,13 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { format } from 'date-fns';
 import { 
-  Shift, Worker, Part, Task, TaskNote, TaskTimeLog, ShiftReport,
-  TaskStatus, TaskPriority, WorkerRole, ShiftType
+  Shift, Worker, Part, Task, TaskNote, TaskTimeLog, ShiftReport, User,
+  TaskStatus, TaskPriority, WorkerRole, ShiftType, ViewMode
 } from '../types';
 import { mockShifts, mockWorkers, mockParts, mockTasks, mockTaskNotes, mockTaskTimeLogs, mockShiftReports } from '../data/mockData';
 
 interface ShopState {
+  // Data
   shifts: Shift[];
   workers: Worker[];
   parts: Part[];
@@ -15,9 +16,14 @@ interface ShopState {
   taskNotes: TaskNote[];
   taskTimeLogs: TaskTimeLog[];
   shiftReports: ShiftReport[];
+  users: User[];
+  
+  // UI State
   selectedTaskId: string | null;
   isTaskModalOpen: boolean;
   selectedDate: string;
+  currentUser: User | null;
+  viewMode: ViewMode;
   startChecklistStatus: Record<string, Record<string, boolean>>;
   endCleanupStatus: Record<string, Record<string, boolean>>;
   
@@ -25,6 +31,12 @@ interface ShopState {
   setSelectedTaskId: (id: string | null) => void;
   setTaskModalOpen: (isOpen: boolean) => void;
   setSelectedDate: (date: string) => void;
+  setCurrentUser: (user: User) => void;
+  setViewMode: (mode: ViewMode) => void;
+  
+  // User actions
+  addUser: (userData: Omit<User, 'id' | 'createdAt'>) => void;
+  deleteUser: (userId: string) => void;
   
   // Shift actions
   addShift: (shift: Omit<Shift, 'id'>) => void;
@@ -71,6 +83,7 @@ interface ShopState {
     totalDuration?: number;
   }) | null;
   getTaskNotesByTaskId: (taskId: string) => TaskNote[];
+  getFilteredTasks: () => Task[];
   
   // Checklists
   createStartOfShiftChecklist: (data: any) => void;
@@ -83,6 +96,15 @@ interface ShopState {
   printTask: (taskId: string) => void;
 }
 
+// Default user
+const defaultUser: User = {
+  id: 'user-1',
+  name: 'Default User',
+  email: 'default@company.com',
+  color: '#3B82F6',
+  createdAt: new Date().toISOString()
+};
+
 export const useShopStore = create(
   persist<ShopState>(
     (set, get) => ({
@@ -93,15 +115,55 @@ export const useShopStore = create(
       taskNotes: mockTaskNotes,
       taskTimeLogs: mockTaskTimeLogs,
       shiftReports: mockShiftReports,
+      users: [defaultUser],
       selectedTaskId: null,
       isTaskModalOpen: false,
       selectedDate: format(new Date(), 'yyyy-MM-dd'),
+      currentUser: defaultUser,
+      viewMode: ViewMode.MY_VIEW,
       startChecklistStatus: {},
       endCleanupStatus: {},
       
       setSelectedTaskId: (id) => set({ selectedTaskId: id }),
       setTaskModalOpen: (isOpen) => set({ isTaskModalOpen: isOpen }),
       setSelectedDate: (date) => set({ selectedDate: date }),
+      setCurrentUser: (user) => set({ currentUser: user }),
+      setViewMode: (mode) => set({ viewMode: mode }),
+      
+      addUser: (userData) => {
+        const newUser: User = {
+          id: `user-${Date.now()}`,
+          ...userData,
+          createdAt: new Date().toISOString()
+        };
+        
+        set((state) => ({
+          users: [...state.users, newUser]
+        }));
+      },
+      
+      deleteUser: (userId) => {
+        set((state) => {
+          const userToDelete = state.users.find(u => u.id === userId);
+          if (!userToDelete) return state;
+          
+          // Filter out tasks created by this user
+          const updatedTasks = state.tasks.filter(task => task.createdBy !== userId);
+          
+          // Update current user if the deleted user was selected
+          let newCurrentUser = state.currentUser;
+          if (state.currentUser?.id === userId) {
+            newCurrentUser = state.users.find(u => u.id !== userId) || state.users[0];
+          }
+          
+          return {
+            ...state,
+            users: state.users.filter(u => u.id !== userId),
+            tasks: updatedTasks,
+            currentUser: newCurrentUser
+          };
+        });
+      },
       
       addShift: (shift) => {
         const newShift: Shift = {
@@ -128,8 +190,10 @@ export const useShopStore = create(
       },
       
       addTask: (taskData) => {
+        const state = get();
+        
         // Check for duplicate work order
-        const existingTask = get().tasks.find(
+        const existingTask = state.tasks.find(
           task => task.workOrderNumber.toLowerCase() === taskData.workOrderNumber.toLowerCase()
         );
         
@@ -140,7 +204,7 @@ export const useShopStore = create(
         // Create a simple part entry for the work order
         const newPart: Part = {
           id: `part-${Date.now()}`,
-          partNumber: taskData.workOrderNumber, // Use work order as part number
+          partNumber: taskData.workOrderNumber,
           revision: 'N/A',
           material: 'N/A',
           coating: undefined
@@ -161,7 +225,8 @@ export const useShopStore = create(
           shiftId: taskData.shiftId,
           status: TaskStatus.PENDING,
           createdAt: taskData.createdAt || new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
+          createdBy: state.currentUser?.id || 'unknown'
         };
 
         set(state => ({
@@ -425,7 +490,13 @@ export const useShopStore = create(
       },
       
       getTaskSummaryForDate: (date) => {
-        const tasks = get().tasks.filter((t) => t.createdAt.startsWith(date));
+        const state = get();
+        let tasks = state.tasks.filter((t) => t.createdAt.startsWith(date));
+        
+        // Filter by user if in MY_VIEW mode
+        if (state.viewMode === ViewMode.MY_VIEW && state.currentUser) {
+          tasks = tasks.filter((t) => t.createdBy === state.currentUser?.id);
+        }
         
         return {
           total: tasks.length,
@@ -469,6 +540,18 @@ export const useShopStore = create(
           );
       },
       
+      getFilteredTasks: () => {
+        const state = get();
+        let tasks = state.tasks;
+        
+        // Filter by user if in MY_VIEW mode
+        if (state.viewMode === ViewMode.MY_VIEW && state.currentUser) {
+          tasks = tasks.filter((t) => t.createdBy === state.currentUser?.id);
+        }
+        
+        return tasks;
+      },
+      
       createStartOfShiftChecklist: (data) => {
         const { shiftId, date } = data;
         set((state) => ({
@@ -504,10 +587,18 @@ export const useShopStore = create(
       },
 
       getCarriedOverTasks: (date: string) => {
-        return get().tasks.filter(task => 
+        const state = get();
+        let tasks = state.tasks.filter(task => 
           task.carriedOverFromTaskId && 
           task.createdAt.startsWith(date)
         );
+        
+        // Filter by user if in MY_VIEW mode
+        if (state.viewMode === ViewMode.MY_VIEW && state.currentUser) {
+          tasks = tasks.filter((t) => t.createdBy === state.currentUser?.id);
+        }
+        
+        return tasks;
       },
       
       printTask: (taskId) => {
@@ -587,6 +678,9 @@ export const useShopStore = create(
         taskNotes: state.taskNotes,
         taskTimeLogs: state.taskTimeLogs,
         shiftReports: state.shiftReports,
+        users: state.users,
+        currentUser: state.currentUser,
+        viewMode: state.viewMode,
         startChecklistStatus: state.startChecklistStatus,
         endCleanupStatus: state.endCleanupStatus
       })

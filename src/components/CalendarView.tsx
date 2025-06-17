@@ -22,7 +22,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onDateSelect, onClose }) =>
   const monthEnd = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  // Get tasks for each date
+  // Get tasks for each date (ALL tasks, regardless of view mode for calendar)
   const tasksByDate = tasks.reduce((acc, task) => {
     const date = task.createdAt.split('T')[0];
     acc[date] = (acc[date] || 0) + 1;

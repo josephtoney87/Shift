@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { format, parseISO, isAfter, startOfDay } from 'date-fns';
 import { 
   Plus, CheckCircle2, ClipboardList, Calendar, ZoomIn, ZoomOut, 
-  RotateCcw, LayoutGrid 
+  RotateCcw, LayoutGrid, AlertTriangle
 } from 'lucide-react';
 import { useShopStore } from '../store/useShopStore';
 import ShiftHeader from './ShiftHeader';
@@ -70,6 +70,12 @@ const ShiftDashboard: React.FC = () => {
     !isStartChecklistComplete(shift.id, selectedDate) || 
     !isEndCleanupComplete(shift.id, selectedDate)
   );
+
+  // Get count of shifts with incomplete checklists
+  const incompleteChecklistsCount = !isFutureDate ? shifts.filter(shift => 
+    !isStartChecklistComplete(shift.id, selectedDate) || 
+    !isEndCleanupComplete(shift.id, selectedDate)
+  ).length : 0;
 
   const getDateClassName = () => {
     const classes = ['font-medium'];
@@ -182,15 +188,20 @@ const ShiftDashboard: React.FC = () => {
             <div className="flex items-center">
               <button
                 onClick={() => setShowCalendarView(true)}
-                className="mr-3 p-2 hover:bg-neutral-100 rounded-md"
+                className="mr-3 p-2 hover:bg-neutral-100 rounded-md relative"
               >
                 <Calendar className="h-5 w-5 text-neutral-500" />
+                {hasIncompleteChecklists && (
+                  <AlertTriangle className="absolute -top-1 -right-1 h-4 w-4 text-error-600" />
+                )}
               </button>
               <SearchBar onSearchResult={handleSearchResult} />
             </div>
             <div className="flex items-center space-x-4">
-              <span className={getDateClassName()}>
-                {format(parseISO(currentDate), 'MMMM d, yyyy')}
+              <div className="flex items-center">
+                <span className={getDateClassName()}>
+                  {format(parseISO(currentDate), 'MMMM d, yyyy')}
+                </span>
                 {isFutureDate && (
                   <span className="ml-2 text-sm text-primary-600">
                     (Future Date)
@@ -202,11 +213,12 @@ const ShiftDashboard: React.FC = () => {
                   </span>
                 )}
                 {hasIncompleteChecklists && (
-                  <span className="ml-2 text-sm text-error-600">
-                    (Incomplete checklists)
-                  </span>
+                  <div className="ml-2 flex items-center text-sm text-error-600">
+                    <AlertTriangle className="h-4 w-4 mr-1" />
+                    ({incompleteChecklistsCount} incomplete checklist{incompleteChecklistsCount !== 1 ? 's' : ''})
+                  </div>
                 )}
-              </span>
+              </div>
               <NotesExporter date={currentDate} />
               <button
                 onClick={() => setShowSimpleView(true)}

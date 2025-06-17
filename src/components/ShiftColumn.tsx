@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, ChevronUp, Clock, CheckCircle2, ClipboardList, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, CheckCircle2, ClipboardList, Trash2, AlertTriangle, Check } from 'lucide-react';
 import { Shift, Task, Part, Worker } from '../types';
 import TaskCard from './TaskCard';
 import StartOfShiftChecklist from './StartOfShiftChecklist';
@@ -26,16 +26,26 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
 }) => {
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [activeTab, setActiveTab] = useState<'tasks' | 'startChecklist' | 'endCleanup'>('tasks');
-  const { deleteTask } = useShopStore();
+  const { 
+    deleteTask, 
+    selectedDate, 
+    isStartChecklistComplete, 
+    isEndCleanupComplete 
+  } = useShopStore();
   
-  // Get shift background color based on shift type
+  // Check if checklists are complete for this shift and date
+  const startChecklistComplete = isStartChecklistComplete(shift.id, selectedDate);
+  const endCleanupComplete = isEndCleanupComplete(shift.id, selectedDate);
+  const hasIncompleteChecklists = !startChecklistComplete || !endCleanupComplete;
+  
+  // Get shift background color based on shift type and checklist status
   const getShiftColor = () => {
-    switch (shift.type) {
-      case 'S1': return 'bg-primary-700';
-      case 'S2': return 'bg-secondary-700';
-      case 'S3': return 'bg-neutral-700';
-      default: return 'bg-primary-700';
-    }
+    const baseColors = {
+      'S1': hasIncompleteChecklists ? 'bg-error-700' : 'bg-primary-700',
+      'S2': hasIncompleteChecklists ? 'bg-error-700' : 'bg-secondary-700',
+      'S3': hasIncompleteChecklists ? 'bg-error-700' : 'bg-neutral-700',
+    };
+    return baseColors[shift.type] || 'bg-primary-700';
   };
 
   const handleTabChange = (tab: 'tasks' | 'startChecklist' | 'endCleanup') => {
@@ -51,7 +61,13 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
   
   return (
     <div className="flex flex-col h-full bg-neutral-100 rounded-lg shadow-sm">
-      <div className={`${getShiftColor()} text-white p-3 rounded-t-lg`}>
+      <div className={`${getShiftColor()} text-white p-3 rounded-t-lg relative`}>
+        {hasIncompleteChecklists && (
+          <div className="absolute top-2 right-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-300" />
+          </div>
+        )}
+        
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center">
             <h3 className="font-semibold">Shift {shift.type}</h3>
@@ -73,6 +89,24 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
           </div>
         </div>
 
+        {/* Checklist Status Indicators */}
+        {(startChecklistComplete || endCleanupComplete) && (
+          <div className="mb-2 flex items-center space-x-2 text-xs">
+            {startChecklistComplete && (
+              <div className="flex items-center bg-success-600 px-2 py-1 rounded">
+                <Check className="h-3 w-3 mr-1" />
+                Start Complete
+              </div>
+            )}
+            {endCleanupComplete && (
+              <div className="flex items-center bg-success-600 px-2 py-1 rounded">
+                <Check className="h-3 w-3 mr-1" />
+                End Complete
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Tab Navigation */}
         <div className="flex space-x-2 mt-2">
           <button
@@ -93,8 +127,11 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
                 : 'bg-white/20 hover:bg-white/30'
             }`}
           >
-            <CheckCircle2 className="h-4 w-4 mr-1" />
+            <CheckCircle2 className={`h-4 w-4 mr-1 ${startChecklistComplete ? 'text-success-600' : ''}`} />
             Start Checklist
+            {startChecklistComplete && (
+              <Check className="h-3 w-3 ml-1 text-success-600" />
+            )}
           </button>
           <button
             onClick={() => handleTabChange('endCleanup')}
@@ -104,8 +141,11 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
                 : 'bg-white/20 hover:bg-white/30'
             }`}
           >
-            <ClipboardList className="h-4 w-4 mr-1" />
+            <ClipboardList className={`h-4 w-4 mr-1 ${endCleanupComplete ? 'text-success-600' : ''}`} />
             End Cleanup
+            {endCleanupComplete && (
+              <Check className="h-3 w-3 ml-1 text-success-600" />
+            )}
           </button>
         </div>
       </div>
@@ -146,15 +186,43 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
           )}
 
           {activeTab === 'startChecklist' && (
-            <StartOfShiftChecklist
-              onComplete={() => setActiveTab('tasks')}
-            />
+            <div>
+              {startChecklistComplete ? (
+                <div className="bg-success-50 border border-success-200 rounded-lg p-4 text-center">
+                  <CheckCircle2 className="h-12 w-12 text-success-600 mx-auto mb-3" />
+                  <h3 className="text-lg font-semibold text-success-800 mb-2">
+                    Start of Shift Checklist Complete
+                  </h3>
+                  <p className="text-success-700">
+                    The start of shift checklist has been completed for this shift.
+                  </p>
+                </div>
+              ) : (
+                <StartOfShiftChecklist
+                  onComplete={() => setActiveTab('tasks')}
+                />
+              )}
+            </div>
           )}
 
           {activeTab === 'endCleanup' && (
-            <EndOfShiftCleanup
-              onComplete={() => setActiveTab('tasks')}
-            />
+            <div>
+              {endCleanupComplete ? (
+                <div className="bg-success-50 border border-success-200 rounded-lg p-4 text-center">
+                  <CheckCircle2 className="h-12 w-12 text-success-600 mx-auto mb-3" />
+                  <h3 className="text-lg font-semibold text-success-800 mb-2">
+                    End of Shift Cleanup Complete
+                  </h3>
+                  <p className="text-success-700">
+                    The end of shift cleanup has been completed for this shift.
+                  </p>
+                </div>
+              ) : (
+                <EndOfShiftCleanup
+                  onComplete={() => setActiveTab('tasks')}
+                />
+              )}
+            </div>
           )}
         </div>
       )}

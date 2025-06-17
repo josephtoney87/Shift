@@ -7,6 +7,14 @@ import {
 } from '../types';
 import { mockShifts, mockWorkers, mockParts, mockTasks, mockTaskNotes, mockTaskTimeLogs, mockShiftReports } from '../data/mockData';
 
+interface ChecklistAcknowledgment {
+  shiftId: string;
+  date: string;
+  acknowledgedWorkers: string[];
+  completedAt?: string;
+  completedBy?: string;
+}
+
 interface ShopState {
   // Data
   shifts: Shift[];
@@ -24,8 +32,8 @@ interface ShopState {
   selectedDate: string;
   currentUser: User | null;
   viewMode: ViewMode;
-  startChecklistStatus: Record<string, Record<string, boolean>>;
-  endCleanupStatus: Record<string, Record<string, boolean>>;
+  startChecklistStatus: Record<string, ChecklistAcknowledgment>;
+  endCleanupStatus: Record<string, ChecklistAcknowledgment>;
   
   // Actions
   setSelectedTaskId: (id: string | null) => void;
@@ -88,8 +96,12 @@ interface ShopState {
   // Checklists
   createStartOfShiftChecklist: (data: any) => void;
   createEndOfShiftCleanup: (data: any) => void;
+  acknowledgeStartChecklist: (shiftId: string, date: string, workerId: string) => void;
+  acknowledgeEndCleanup: (shiftId: string, date: string, workerId: string) => void;
   isStartChecklistComplete: (shiftId: string, date: string) => boolean;
   isEndCleanupComplete: (shiftId: string, date: string) => boolean;
+  getStartChecklistAcknowledgments: (shiftId: string, date: string) => string[];
+  getEndCleanupAcknowledgments: (shiftId: string, date: string) => string[];
   getCarriedOverTasks: (date: string) => Task[];
   
   // Print
@@ -554,12 +566,17 @@ export const useShopStore = create(
       
       createStartOfShiftChecklist: (data) => {
         const { shiftId, date } = data;
+        const key = `${shiftId}-${date}`;
+        
         set((state) => ({
           startChecklistStatus: {
             ...state.startChecklistStatus,
-            [shiftId]: {
-              ...(state.startChecklistStatus[shiftId] || {}),
-              [date]: true
+            [key]: {
+              shiftId,
+              date,
+              acknowledgedWorkers: [],
+              completedAt: new Date().toISOString(),
+              completedBy: state.currentUser?.id
             }
           }
         }));
@@ -567,23 +584,102 @@ export const useShopStore = create(
       
       createEndOfShiftCleanup: (data) => {
         const { shiftId, date } = data;
+        const key = `${shiftId}-${date}`;
+        
         set((state) => ({
           endCleanupStatus: {
             ...state.endCleanupStatus,
-            [shiftId]: {
-              ...(state.endCleanupStatus[shiftId] || {}),
-              [date]: true
+            [key]: {
+              shiftId,
+              date,
+              acknowledgedWorkers: [],
+              completedAt: new Date().toISOString(),
+              completedBy: state.currentUser?.id
             }
           }
         }));
       },
 
+      acknowledgeStartChecklist: (shiftId, date, workerId) => {
+        const key = `${shiftId}-${date}`;
+        set((state) => {
+          const current = state.startChecklistStatus[key];
+          if (!current) return state;
+          
+          const acknowledgedWorkers = [...new Set([...current.acknowledgedWorkers, workerId])];
+          
+          return {
+            ...state,
+            startChecklistStatus: {
+              ...state.startChecklistStatus,
+              [key]: {
+                ...current,
+                acknowledgedWorkers
+              }
+            }
+          };
+        });
+      },
+
+      acknowledgeEndCleanup: (shiftId, date, workerId) => {
+        const key = `${shiftId}-${date}`;
+        set((state) => {
+          const current = state.endCleanupStatus[key];
+          if (!current) return state;
+          
+          const acknowledgedWorkers = [...new Set([...current.acknowledgedWorkers, workerId])];
+          
+          return {
+            ...state,
+            endCleanupStatus: {
+              ...state.endCleanupStatus,
+              [key]: {
+                ...current,
+                acknowledgedWorkers
+              }
+            }
+          };
+        });
+      },
+
       isStartChecklistComplete: (shiftId: string, date: string) => {
-        return get().startChecklistStatus[shiftId]?.[date] || false;
+        const key = `${shiftId}-${date}`;
+        const checklist = get().startChecklistStatus[key];
+        if (!checklist) return false;
+        
+        // Get workers assigned to this shift
+        const shiftWorkers = get().workers.filter(w => w.shiftId === shiftId);
+        if (shiftWorkers.length === 0) return !!checklist.completedAt;
+        
+        // Check if all workers have acknowledged
+        return shiftWorkers.every(worker => 
+          checklist.acknowledgedWorkers.includes(worker.id)
+        );
       },
 
       isEndCleanupComplete: (shiftId: string, date: string) => {
-        return get().endCleanupStatus[shiftId]?.[date] || false;
+        const key = `${shiftId}-${date}`;
+        const cleanup = get().endCleanupStatus[key];
+        if (!cleanup) return false;
+        
+        // Get workers assigned to this shift
+        const shiftWorkers = get().workers.filter(w => w.shiftId === shiftId);
+        if (shiftWorkers.length === 0) return !!cleanup.completedAt;
+        
+        // Check if all workers have acknowledged
+        return shiftWorkers.every(worker => 
+          cleanup.acknowledgedWorkers.includes(worker.id)
+        );
+      },
+
+      getStartChecklistAcknowledgments: (shiftId: string, date: string) => {
+        const key = `${shiftId}-${date}`;
+        return get().startChecklistStatus[key]?.acknowledgedWorkers || [];
+      },
+
+      getEndCleanupAcknowledgments: (shiftId: string, date: string) => {
+        const key = `${shiftId}-${date}`;
+        return get().endCleanupStatus[key]?.acknowledgedWorkers || [];
       },
 
       getCarriedOverTasks: (date: string) => {

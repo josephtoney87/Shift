@@ -3,10 +3,16 @@ import { Check, AlertTriangle, X } from 'lucide-react';
 import { useShopStore } from '../store/useShopStore';
 
 interface StartOfShiftChecklistProps {
+  shiftId: string;
+  selectedDate: string;
   onComplete?: () => void;
 }
 
-const StartOfShiftChecklist: React.FC<StartOfShiftChecklistProps> = ({ onComplete }) => {
+const StartOfShiftChecklist: React.FC<StartOfShiftChecklistProps> = ({ 
+  shiftId, 
+  selectedDate, 
+  onComplete 
+}) => {
   const { createStartOfShiftChecklist } = useShopStore();
   const [formData, setFormData] = useState({
     workOrderNumber: '',
@@ -68,8 +74,8 @@ const StartOfShiftChecklist: React.FC<StartOfShiftChecklistProps> = ({ onComplet
       ...formData,
       toolsRequiringAttention,
       immediateAttentionTools,
-      shiftId: 'current-shift', // In production, get from context
-      date: new Date().toISOString().split('T')[0],
+      shiftId,
+      date: selectedDate,
       completedBy: 'current-worker', // In production, get from context
     });
 

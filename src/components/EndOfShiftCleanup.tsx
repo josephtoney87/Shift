@@ -3,10 +3,16 @@ import { Check, X, Upload } from 'lucide-react';
 import { useShopStore } from '../store/useShopStore';
 
 interface EndOfShiftCleanupProps {
+  shiftId: string;
+  selectedDate: string;
   onComplete?: () => void;
 }
 
-const EndOfShiftCleanup: React.FC<EndOfShiftCleanupProps> = ({ onComplete }) => {
+const EndOfShiftCleanup: React.FC<EndOfShiftCleanupProps> = ({ 
+  shiftId, 
+  selectedDate, 
+  onComplete 
+}) => {
   const { createEndOfShiftCleanup } = useShopStore();
   const [formData, setFormData] = useState({
     preparationChecks: {
@@ -51,8 +57,8 @@ const EndOfShiftCleanup: React.FC<EndOfShiftCleanupProps> = ({ onComplete }) => 
     
     createEndOfShiftCleanup({
       ...formData,
-      shiftId: 'current-shift', // In production, get from context
-      date: new Date().toISOString().split('T')[0],
+      shiftId,
+      date: selectedDate,
       completedBy: 'current-worker', // In production, get from context
     });
 

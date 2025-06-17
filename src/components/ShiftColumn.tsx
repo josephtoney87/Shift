@@ -199,6 +199,8 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
                 </div>
               ) : (
                 <StartOfShiftChecklist
+                  shiftId={shift.id}
+                  selectedDate={selectedDate}
                   onComplete={() => setActiveTab('tasks')}
                 />
               )}
@@ -219,6 +221,8 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
                 </div>
               ) : (
                 <EndOfShiftCleanup
+                  shiftId={shift.id}
+                  selectedDate={selectedDate}
                   onComplete={() => setActiveTab('tasks')}
                 />
               )}

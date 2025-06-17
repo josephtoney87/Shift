@@ -2,6 +2,7 @@ import React from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay } from 'date-fns';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useShopStore } from '../store/useShopStore';
+import { ViewMode } from '../types';
 
 interface CalendarViewProps {
   onDateSelect: (date: string) => void;
@@ -14,7 +15,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onDateSelect, onClose }) =>
     selectedDate, 
     shifts, 
     isStartChecklistComplete, 
-    isEndCleanupComplete 
+    isEndCleanupComplete,
+    currentUser,
+    viewMode
   } = useShopStore();
   const [currentMonth, setCurrentMonth] = React.useState(new Date(selectedDate));
 
@@ -22,24 +25,63 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onDateSelect, onClose }) =>
   const monthEnd = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  // Get tasks for each date (ALL tasks, regardless of view mode for calendar)
+  // Get tasks for each date based on view mode
+  const getTasksForDate = (dateStr: string) => {
+    let dateTasks = tasks.filter(task => task.createdAt.startsWith(dateStr));
+    
+    // CRITICAL: Filter by user in MY_VIEW mode
+    if (viewMode === ViewMode.MY_VIEW && currentUser) {
+      dateTasks = dateTasks.filter(task => task.createdBy === currentUser.id);
+    }
+    
+    return dateTasks;
+  };
+
+  // Get task counts for each date based on view mode
   const tasksByDate = tasks.reduce((acc, task) => {
     const date = task.createdAt.split('T')[0];
-    acc[date] = (acc[date] || 0) + 1;
+    
+    // Filter by view mode for task counts
+    let shouldInclude = true;
+    if (viewMode === ViewMode.MY_VIEW && currentUser) {
+      shouldInclude = task.createdBy === currentUser.id;
+    }
+    
+    if (shouldInclude) {
+      acc[date] = (acc[date] || 0) + 1;
+    }
+    
     return acc;
   }, {} as Record<string, number>);
 
-  // Get checklist completion status for each date
+  // CRITICAL: Get checklist status - only show warnings for dates with tasks that have incomplete checklists
   const getChecklistStatus = (dateStr: string) => {
-    const incompleteShifts = shifts.filter(shift => {
+    const dateTasks = getTasksForDate(dateStr);
+    
+    // If no tasks for this date (considering view mode), NO warnings
+    if (dateTasks.length === 0) {
+      return {
+        hasIncompleteChecklists: false,
+        incompleteShiftsCount: 0
+      };
+    }
+
+    // Get shifts that actually have tasks for this date
+    const shiftsWithTasks = shifts.filter(shift => {
+      const shiftTasks = dateTasks.filter(task => task.shiftId === shift.id);
+      return shiftTasks.length > 0; // Only consider shifts with actual tasks
+    });
+
+    // CRITICAL: Only show warnings if shifts with tasks have incomplete checklists
+    const shiftsWithIncompleteChecklists = shiftsWithTasks.filter(shift => {
       const startComplete = isStartChecklistComplete(shift.id, dateStr);
       const endComplete = isEndCleanupComplete(shift.id, dateStr);
       return !startComplete || !endComplete;
     });
     
     return {
-      hasIncompleteTasks: incompleteShifts.length > 0,
-      incompleteCount: incompleteShifts.length
+      hasIncompleteChecklists: shiftsWithIncompleteChecklists.length > 0,
+      incompleteShiftsCount: shiftsWithIncompleteChecklists.length
     };
   };
 
@@ -66,6 +108,22 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onDateSelect, onClose }) =>
             <h1 className="text-2xl font-bold text-gray-900">
               Task Calendar
             </h1>
+            {currentUser && viewMode === ViewMode.MY_VIEW && (
+              <div className="ml-4 flex items-center space-x-2 text-sm text-neutral-600">
+                <div
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-medium"
+                  style={{ backgroundColor: currentUser.color }}
+                >
+                  {currentUser.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                </div>
+                <span>{currentUser.name}'s View</span>
+              </div>
+            )}
+            {viewMode === ViewMode.ALL_DATA && (
+              <div className="ml-4 text-sm text-neutral-600">
+                All Users Data
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -131,14 +189,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onDateSelect, onClose }) =>
                     {format(date, 'd')}
                   </div>
                   
-                  {/* Incomplete Checklist Warning */}
-                  {checklistStatus.hasIncompleteTasks && (
+                  {/* CRITICAL: Only show warning if there are actual tasks with incomplete checklists */}
+                  {checklistStatus.hasIncompleteChecklists && (
                     <div className="absolute top-2 left-2">
                       <AlertTriangle className="h-4 w-4 text-error-600" />
                     </div>
                   )}
                   
-                  {/* Task Count */}
+                  {/* Task Count - Only show if there are tasks for this user/view */}
                   {taskCount > 0 && (
                     <div className="absolute bottom-2 left-2 right-2">
                       <div className="bg-warning-100 text-warning-800 text-xs px-2 py-1 rounded-full">
@@ -147,11 +205,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onDateSelect, onClose }) =>
                     </div>
                   )}
 
-                  {/* Checklist Status */}
-                  {checklistStatus.hasIncompleteTasks && (
+                  {/* Checklist Status - Only show if there are tasks with incomplete checklists */}
+                  {checklistStatus.hasIncompleteChecklists && (
                     <div className="absolute bottom-8 left-2 right-2">
                       <div className="bg-error-100 text-error-800 text-xs px-2 py-1 rounded-full">
-                        {checklistStatus.incompleteCount} incomplete checklist{checklistStatus.incompleteCount !== 1 ? 's' : ''}
+                        {checklistStatus.incompleteShiftsCount} incomplete checklist{checklistStatus.incompleteShiftsCount !== 1 ? 's' : ''}
                       </div>
                     </div>
                   )}
@@ -184,6 +242,18 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onDateSelect, onClose }) =>
               <span>Selected date</span>
             </div>
           </div>
+          
+          {viewMode === ViewMode.MY_VIEW && currentUser && (
+            <div className="mt-3 p-2 bg-blue-50 rounded border text-sm text-blue-700">
+              <strong>My View:</strong> Only showing your tasks and warnings. Other users' tasks are hidden.
+            </div>
+          )}
+          
+          {viewMode === ViewMode.ALL_DATA && (
+            <div className="mt-3 p-2 bg-green-50 rounded border text-sm text-green-700">
+              <strong>All Data:</strong> Showing tasks and warnings from all users.
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -73,16 +73,19 @@ const ShiftDashboard: React.FC = () => {
   });
 
   const carriedOverTasks = getCarriedOverTasks(selectedDate);
-  const hasIncompleteChecklists = !isFutureDate && shifts.some(shift => 
-    !isStartChecklistComplete(shift.id, selectedDate) || 
-    !isEndCleanupComplete(shift.id, selectedDate)
-  );
+  
+  // CRITICAL: Only count incomplete checklists for shifts that actually have tasks
+  const shiftsWithIncompleteLists = !isFutureDate ? shifts.filter(shift => {
+    const shiftTasks = expandedTasks.filter(task => task?.shiftId === shift.id);
+    if (shiftTasks.length === 0) return false; // CRITICAL: No tasks = no checklist requirement
+    
+    const startComplete = isStartChecklistComplete(shift.id, selectedDate);
+    const endComplete = isEndCleanupComplete(shift.id, selectedDate);
+    return !startComplete || !endComplete;
+  }) : [];
 
-  // Get count of shifts with incomplete checklists
-  const incompleteChecklistsCount = !isFutureDate ? shifts.filter(shift => 
-    !isStartChecklistComplete(shift.id, selectedDate) || 
-    !isEndCleanupComplete(shift.id, selectedDate)
-  ).length : 0;
+  const hasIncompleteChecklists = shiftsWithIncompleteLists.length > 0;
+  const incompleteChecklistsCount = shiftsWithIncompleteLists.length;
 
   const getDateClassName = () => {
     const classes = ['font-medium'];
@@ -193,6 +196,7 @@ const ShiftDashboard: React.FC = () => {
         <div className="bg-white border-b border-neutral-200 px-4 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
+              {/* CRITICAL: Calendar button with warning indicator for incomplete checklists */}
               <button
                 onClick={() => setShowCalendarView(true)}
                 className="mr-3 p-2 hover:bg-neutral-100 rounded-md relative"

@@ -4,12 +4,14 @@ import type { Database } from '../types/supabase';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+let supabase: any;
+
 // For local development, create a mock client if credentials are missing
 if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project.supabase.co') {
   console.warn('Supabase credentials not configured. Running in local-only mode.');
   
   // Create a mock client that returns empty data
-  export const supabase = {
+  supabase = {
     auth: {
       getSession: () => Promise.resolve({ data: { session: null }, error: null }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
@@ -28,9 +30,9 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project.su
       subscribe: () => {},
     }),
     removeChannel: () => {},
-  } as any;
+  };
 } else {
-  export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
@@ -45,3 +47,5 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project.su
     }
   });
 }
+
+export { supabase };

@@ -148,3 +148,43 @@ export interface ShiftReport {
   summaryNotes: string;
   handoverReport?: HandoverReport;
 }
+
+// Additional types for checklists
+export interface StartOfShiftChecklist {
+  id: string;
+  shiftId: string;
+  date: string;
+  workOrderNumber: string;
+  palletNumber: string;
+  partNumber: string;
+  programNumber: string;
+  startingBlockNumber: string;
+  toolNumber: string;
+  toolsRequiringAttention: string[];
+  immediateAttentionTools: string[];
+  notes: string;
+  safetyChecks: Record<string, boolean>;
+  completedBy: string;
+  completedAt: string;
+}
+
+export interface EndOfShiftCleanup {
+  id: string;
+  shiftId: string;
+  date: string;
+  preparationChecks: Record<string, boolean>;
+  cleaningChecks: Record<string, boolean>;
+  notes: string;
+  completedBy: string;
+  completedAt: string;
+}
+
+export interface CalibrationRecord {
+  id: string;
+  equipmentId: string;
+  calibrationDate: string;
+  nextCalibrationDate: string;
+  performedBy: string;
+  notes?: string;
+  createdAt: string;
+}

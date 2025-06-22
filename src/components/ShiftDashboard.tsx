@@ -421,7 +421,7 @@ const ShiftDashboard: React.FC = () => {
 
       {/* Task Modal */}
       {isTaskModalOpen && (
-        <ErrorBoundary fallback={<div className="p-4 text-red-600">Task Modal Error</div>}>
+        <ErrorBoundary>
           <TaskModal 
             isOpen={isTaskModalOpen} 
             onClose={handleCloseModal} 
@@ -438,21 +438,50 @@ const ShiftDashboard: React.FC = () => {
 
 export default ShiftDashboard;
 
-// Basic ErrorBoundary
-class ErrorBoundary extends React.Component<{ fallback: React.ReactNode }, { hasError: boolean }> {
-  constructor(props: any) {
+// Enhanced ErrorBoundary with proper React import
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: any) {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Task Modal Error:', error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
-      return this.props.fallback;
+      return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h2 className="text-xl font-semibold text-red-600 mb-4">Something went wrong</h2>
+            <p className="text-gray-600 mb-4">
+              The task modal encountered an error. Please try refreshing the page.
+            </p>
+            <button
+              onClick={() => this.setState({ hasError: false })}
+              className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      );
     }
+
     return this.props.children;
   }
 }

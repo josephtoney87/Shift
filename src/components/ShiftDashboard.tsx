@@ -24,18 +24,32 @@ import ConnectionStatus from './ConnectionStatus';
 import Tooltip from './Tooltip';
 
 const ShiftDashboard: React.FC = () => {
+  const storeState = useShopStore();
+  
+  // Early return if store state is not properly initialized
+  if (!storeState) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-neutral-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-neutral-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   const { 
-    shifts, 
-    workers, 
-    parts,
-    taskTimeLogs,
+    shifts = [], 
+    workers = [], 
+    parts = [],
+    taskTimeLogs = [],
     selectedDate,
     selectedTaskId,
-    isTaskModalOpen,
+    isTaskModalOpen = false,
     currentUser,
-    viewMode,
-    pendingChanges,
-    isInitialized,
+    viewMode = ViewMode.MY_VIEW,
+    pendingChanges = [],
+    isInitialized = false,
     setSelectedDate,
     setSelectedTaskId,
     setTaskModalOpen,
@@ -46,7 +60,7 @@ const ShiftDashboard: React.FC = () => {
     getCarriedOverTasks,
     isStartChecklistComplete,
     isEndCleanupComplete
-  } = useShopStore();
+  } = storeState;
   
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<'view' | 'edit' | 'create'>('view');
@@ -60,14 +74,14 @@ const ShiftDashboard: React.FC = () => {
   // Update pending count
   useEffect(() => {
     const interval = setInterval(() => {
-      setPendingCount(persistenceService.getPendingOperationsCount());
+      setPendingCount(persistenceService?.getPendingOperationsCount() || 0);
     }, 1000);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Early return with loading state if not initialized
-  if (!isInitialized) {
+  // Early return with loading state if not initialized or missing required functions
+  if (!isInitialized || !getTaskSummaryForDate || !getFilteredTasks) {
     return (
       <div className="flex items-center justify-center h-screen bg-neutral-50">
         <div className="text-center">
@@ -78,39 +92,56 @@ const ShiftDashboard: React.FC = () => {
     );
   }
 
+  // Safe date handling
   const currentDate = selectedDate || format(new Date(), 'yyyy-MM-dd');
-  const taskSummary = getTaskSummaryForDate(currentDate);
+  const taskSummary = getTaskSummaryForDate(currentDate) || {
+    total: 0,
+    completed: 0,
+    inProgress: 0,
+    pending: 0,
+    carriedOver: 0
+  };
+  
   const isFutureDate = isAfter(startOfDay(new Date(currentDate)), startOfDay(new Date()));
   
-  // Get filtered tasks based on view mode
-  const filteredTasks = getFilteredTasks();
+  // Get filtered tasks based on view mode with safety checks
+  const filteredTasks = getFilteredTasks() || [];
   
   const expandedTasks = filteredTasks
-    .filter(task => task.createdAt.startsWith(currentDate))
+    .filter(task => task?.createdAt?.startsWith(currentDate))
     .map(task => {
-      const part = parts.find(p => p.id === task.partId);
+      if (!task?.id || !task?.partId) return null;
+      
+      const part = parts.find(p => p?.id === task.partId);
       if (!part) return null;
-      const taskWorkers = workers.filter(w => task.assignedWorkers.includes(w.id));
+      
+      const taskWorkers = workers.filter(w => w?.id && task?.assignedWorkers?.includes(w.id));
       return { ...task, part, workers: taskWorkers };
     })
     .filter(Boolean);
   
-  const tasksByShift = shifts.map(shift => {
+  // Safe shift processing
+  const tasksByShift = (shifts || []).map(shift => {
+    if (!shift?.id) return { shift, tasks: [] };
+    
     const shiftTasks = expandedTasks.filter(task => task?.shiftId === shift.id);
     return { shift, tasks: shiftTasks };
   });
 
-  const carriedOverTasks = getCarriedOverTasks(selectedDate);
+  const carriedOverTasks = getCarriedOverTasks ? getCarriedOverTasks(selectedDate) : [];
   
   // CRITICAL: Only count incomplete checklists for shifts that actually have tasks
-  const shiftsWithIncompleteLists = !isFutureDate ? shifts.filter(shift => {
-    const shiftTasks = expandedTasks.filter(task => task?.shiftId === shift.id);
-    if (shiftTasks.length === 0) return false; // CRITICAL: No tasks = no checklist requirement
-    
-    const startComplete = isStartChecklistComplete(shift.id, selectedDate);
-    const endComplete = isEndCleanupComplete(shift.id, selectedDate);
-    return !startComplete || !endComplete;
-  }) : [];
+  const shiftsWithIncompleteLists = !isFutureDate && isStartChecklistComplete && isEndCleanupComplete ? 
+    shifts.filter(shift => {
+      if (!shift?.id) return false;
+      
+      const shiftTasks = expandedTasks.filter(task => task?.shiftId === shift.id);
+      if (shiftTasks.length === 0) return false; // CRITICAL: No tasks = no checklist requirement
+      
+      const startComplete = isStartChecklistComplete(shift.id, selectedDate);
+      const endComplete = isEndCleanupComplete(shift.id, selectedDate);
+      return !startComplete || !endComplete;
+    }) : [];
 
   const hasIncompleteChecklists = shiftsWithIncompleteLists.length > 0;
   const incompleteChecklistsCount = shiftsWithIncompleteLists.length;
@@ -134,14 +165,16 @@ const ShiftDashboard: React.FC = () => {
   };
 
   const handleDateChange = (date: string) => {
-    setSelectedDate(date);
+    if (setSelectedDate) {
+      setSelectedDate(date);
+    }
     setShowCalendarView(false);
   };
 
   const handleSearchResult = (result: { type: 'date' | 'workOrder'; value: string; taskId?: string }) => {
-    if (result.type === 'date') {
+    if (result.type === 'date' && setSelectedDate) {
       setSelectedDate(result.value);
-    } else if (result.type === 'workOrder' && result.taskId) {
+    } else if (result.type === 'workOrder' && result.taskId && setSelectedTaskId && setTaskModalOpen) {
       setSelectedTaskId(result.taskId);
       setModalMode('view');
       setTaskModalOpen(true);
@@ -149,34 +182,50 @@ const ShiftDashboard: React.FC = () => {
   };
   
   const handleTaskClick = (taskId: string) => {
-    setSelectedTaskId(taskId);
-    setModalMode('view');
-    setTaskModalOpen(true);
+    if (setSelectedTaskId && setTaskModalOpen) {
+      setSelectedTaskId(taskId);
+      setModalMode('view');
+      setTaskModalOpen(true);
+    }
   };
   
   const handleAddTask = (shiftId: string) => {
-    setSelectedShiftId(shiftId);
-    setModalMode('create');
-    setTaskModalOpen(true);
+    if (setSelectedTaskId && setTaskModalOpen) {
+      setSelectedShiftId(shiftId);
+      setModalMode('create');
+      setTaskModalOpen(true);
+    }
   };
   
   const handleTaskMove = (taskId: string, currentShiftId: string, direction: 'back' | 'forward') => {
-    const currentShiftIndex = shifts.findIndex(s => s.id === currentShiftId);
+    if (!shifts?.length || !moveTaskToShift || !carryOverTask) return;
+    
+    const currentShiftIndex = shifts.findIndex(s => s?.id === currentShiftId);
+    if (currentShiftIndex === -1) return;
+    
     let targetShiftIndex;
 
     if (direction === 'forward') {
       targetShiftIndex = (currentShiftIndex + 1) % shifts.length;
-      carryOverTask(taskId, shifts[targetShiftIndex].id);
+      const targetShift = shifts[targetShiftIndex];
+      if (targetShift?.id) {
+        carryOverTask(taskId, targetShift.id);
+      }
     } else {
       targetShiftIndex = currentShiftIndex === 0 ? shifts.length - 1 : currentShiftIndex - 1;
-      moveTaskToShift(taskId, shifts[targetShiftIndex].id);
+      const targetShift = shifts[targetShiftIndex];
+      if (targetShift?.id) {
+        moveTaskToShift(taskId, targetShift.id);
+      }
     }
   };
   
   const handleCloseModal = () => {
-    setTaskModalOpen(false);
-    setSelectedTaskId(null);
-    setSelectedShiftId(null);
+    if (setTaskModalOpen && setSelectedTaskId) {
+      setTaskModalOpen(false);
+      setSelectedTaskId(null);
+      setSelectedShiftId(null);
+    }
   };
 
   const handleZoom = (action: 'in' | 'out' | 'reset') => {
@@ -194,11 +243,11 @@ const ShiftDashboard: React.FC = () => {
   };
   
   const statsData = [
-    { label: 'Total Tasks', value: taskSummary.total, color: 'bg-neutral-500' },
-    { label: 'Completed', value: taskSummary.completed, color: 'bg-success-500' },
-    { label: 'In Progress', value: taskSummary.inProgress, color: 'bg-primary-500' },
-    { label: 'Pending', value: taskSummary.pending, color: 'bg-warning-500' },
-    { label: 'Carried Over', value: taskSummary.carriedOver, color: 'bg-accent-500' }
+    { label: 'Total Tasks', value: taskSummary.total || 0, color: 'bg-neutral-500' },
+    { label: 'Completed', value: taskSummary.completed || 0, color: 'bg-success-500' },
+    { label: 'In Progress', value: taskSummary.inProgress || 0, color: 'bg-primary-500' },
+    { label: 'Pending', value: taskSummary.pending || 0, color: 'bg-warning-500' },
+    { label: 'Carried Over', value: taskSummary.carriedOver || 0, color: 'bg-accent-500' }
   ];
 
   if (showCalendarView) {
@@ -323,7 +372,7 @@ const ShiftDashboard: React.FC = () => {
                 {taskSummary.total === 0 ? (
                   isFutureDate ? 'Plan tasks for this date' : 'No tasks scheduled for this date'
                 ) : (
-                  `${taskSummary.completed} of ${taskSummary.total} tasks completed`
+                  `${taskSummary.completed || 0} of ${taskSummary.total || 0} tasks completed`
                 )}
               </div>
             </div>
@@ -333,25 +382,29 @@ const ShiftDashboard: React.FC = () => {
         {/* Action Buttons */}
         <div className="px-4 py-3 bg-white border-b border-neutral-200">
           <div className="flex flex-wrap gap-4">
-            {shifts.map(shift => (
-              <Tooltip 
-                key={shift.id}
-                content="Create a new task for this shift with description, notes, priority, and assigned workers"
-                position="bottom"
-              >
-                <button
-                  onClick={() => handleAddTask(shift.id)}
-                  className={`px-4 py-2 rounded-md flex items-center text-white ${
-                    shift.type === 'S1' ? 'bg-primary-600 hover:bg-primary-700' :
-                    shift.type === 'S2' ? 'bg-secondary-600 hover:bg-secondary-700' :
-                    'bg-neutral-600 hover:bg-neutral-700'
-                  }`}
+            {(shifts || []).map(shift => {
+              if (!shift?.id) return null;
+              
+              return (
+                <Tooltip 
+                  key={shift.id}
+                  content="Create a new task for this shift with description, notes, priority, and assigned workers"
+                  position="bottom"
                 >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Add Task to Shift {shift.type}
-                </button>
-              </Tooltip>
-            ))}
+                  <button
+                    onClick={() => handleAddTask(shift.id)}
+                    className={`px-4 py-2 rounded-md flex items-center text-white ${
+                      shift.type === 'S1' ? 'bg-primary-600 hover:bg-primary-700' :
+                      shift.type === 'S2' ? 'bg-secondary-600 hover:bg-secondary-700' :
+                      'bg-neutral-600 hover:bg-neutral-700'
+                    }`}
+                  >
+                    <Plus className="h-5 w-5 mr-2" />
+                    Add Task to Shift {shift.type}
+                  </button>
+                </Tooltip>
+              );
+            })}
             {!isFutureDate && (
               <>
                 <Tooltip 
@@ -412,23 +465,27 @@ const ShiftDashboard: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {tasksByShift.map(({ shift, tasks }, index) => (
-                <ShiftColumn
-                  key={shift.id}
-                  shift={shift}
-                  tasks={tasks}
-                  onTaskClick={handleTaskClick}
-                  onAddTask={handleAddTask}
-                  onMoveBack={index > 0 ? 
-                    (taskId) => handleTaskMove(taskId, shift.id, 'back') : 
-                    undefined
-                  }
-                  onMoveForward={index < shifts.length - 1 ? 
-                    (taskId) => handleTaskMove(taskId, shift.id, 'forward') : 
-                    undefined
-                  }
-                />
-              ))}
+              {tasksByShift.map(({ shift, tasks }, index) => {
+                if (!shift?.id) return null;
+                
+                return (
+                  <ShiftColumn
+                    key={shift.id}
+                    shift={shift}
+                    tasks={tasks}
+                    onTaskClick={handleTaskClick}
+                    onAddTask={handleAddTask}
+                    onMoveBack={index > 0 ? 
+                      (taskId) => handleTaskMove(taskId, shift.id, 'back') : 
+                      undefined
+                    }
+                    onMoveForward={index < shifts.length - 1 ? 
+                      (taskId) => handleTaskMove(taskId, shift.id, 'forward') : 
+                      undefined
+                    }
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -443,7 +500,7 @@ const ShiftDashboard: React.FC = () => {
       </div>
 
       {/* Checklists */}
-      {!isFutureDate && showStartOfShiftChecklist && (
+      {!isFutureDate && showStartOfShiftChecklist && shifts.length > 0 && shifts[0]?.id && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 overflow-auto">
           <StartOfShiftChecklist
             shiftId={shifts[0].id}
@@ -453,7 +510,7 @@ const ShiftDashboard: React.FC = () => {
         </div>
       )}
       
-      {!isFutureDate && showEndOfShiftCleanup && (
+      {!isFutureDate && showEndOfShiftCleanup && shifts.length > 0 && shifts[0]?.id && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 overflow-auto">
           <EndOfShiftCleanup
             shiftId={shifts[0].id}
@@ -464,7 +521,7 @@ const ShiftDashboard: React.FC = () => {
       )}
 
       {/* Task Modal */}
-      {isTaskModalOpen && (
+      {isTaskModalOpen && setTaskModalOpen && setSelectedTaskId && (
         <ErrorBoundary>
           <TaskModal 
             isOpen={isTaskModalOpen} 

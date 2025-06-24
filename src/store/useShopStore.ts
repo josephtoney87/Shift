@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { format } from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
 import { 
   Shift, Worker, Part, Task, TaskNote, TaskTimeLog, ShiftReport, User,
   TaskStatus, TaskPriority, WorkerRole, ShiftType, ViewMode
@@ -253,7 +254,7 @@ export const useShopStore = create(
       
       addUser: (userData) => {
         const newUser: User = {
-          id: `user-${Date.now()}`,
+          id: uuidv4(),
           ...userData,
           createdAt: new Date().toISOString()
         };
@@ -290,7 +291,7 @@ export const useShopStore = create(
       
       addShift: (shift) => {
         const newShift: Shift = {
-          id: `shift-${Date.now()}`,
+          id: uuidv4(),
           ...shift
         };
         set((state) => ({
@@ -337,7 +338,7 @@ export const useShopStore = create(
         }
         
         const newPart: Part = {
-          id: `part-${Date.now()}`,
+          id: uuidv4(),
           partNumber: taskData.workOrderNumber,
           revision: 'N/A',
           material: 'N/A',
@@ -352,7 +353,7 @@ export const useShopStore = create(
         persistenceService.saveData('parts', newPart, 'create');
 
         const newTask: Task = {
-          id: `task-${Date.now()}`,
+          id: uuidv4(),
           workOrderNumber: taskData.workOrderNumber || `WO-${Date.now()}`,
           partId: newPart.id,
           description: taskData.description,
@@ -438,7 +439,7 @@ export const useShopStore = create(
       },
       
       addManualWorker: (name, shiftId) => {
-        const workerId = `worker-${Date.now()}`;
+        const workerId = uuidv4();
         const newWorker: Worker = {
           id: workerId,
           name,
@@ -510,7 +511,7 @@ export const useShopStore = create(
       },
       
       startTaskTimer: (taskId, workerId) => {
-        const timeLogId = `time-${Date.now()}`;
+        const timeLogId = uuidv4();
         const newTimeLog: TaskTimeLog = {
           id: timeLogId,
           taskId,
@@ -551,7 +552,7 @@ export const useShopStore = create(
       
       addTaskNote: (note) => {
         const newNote: TaskNote = {
-          id: `note-${Date.now()}`,
+          id: uuidv4(),
           ...note,
           timestamp: new Date().toISOString()
         };
@@ -629,7 +630,7 @@ export const useShopStore = create(
           .reduce((sum, event) => sum + event.duration, 0);
           
         const handoverReport = {
-          id: `report-${Date.now()}`,
+          id: uuidv4(),
           shiftId,
           date,
           completedTasks,
@@ -650,7 +651,7 @@ export const useShopStore = create(
           shiftReports: [
             ...state.shiftReports,
             {
-              id: `shift-report-${Date.now()}`,
+              id: uuidv4(),
               shiftId,
               date,
               completedTasksCount: completedTasks.length,

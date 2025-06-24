@@ -58,10 +58,6 @@ const ShiftDashboard: React.FC = () => {
   const [showCalendarView, setShowCalendarView] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   
-  const currentDate = selectedDate || format(new Date(), 'yyyy-MM-dd');
-  const taskSummary = getTaskSummaryForDate(currentDate);
-  const isFutureDate = isAfter(startOfDay(new Date(currentDate)), startOfDay(new Date()));
-  
   // Initialize app on mount
   useEffect(() => {
     if (!isInitialized) {
@@ -69,6 +65,22 @@ const ShiftDashboard: React.FC = () => {
     }
   }, [isInitialized, initializeApp]);
 
+  // Early return with loading state if not initialized
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-neutral-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-neutral-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const currentDate = selectedDate || format(new Date(), 'yyyy-MM-dd');
+  const taskSummary = getTaskSummaryForDate(currentDate);
+  const isFutureDate = isAfter(startOfDay(new Date(currentDate)), startOfDay(new Date()));
+  
   // Update pending count
   useEffect(() => {
     const interval = setInterval(() => {

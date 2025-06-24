@@ -6,6 +6,9 @@ import {
   TaskStatus, TaskPriority, WorkerRole, ShiftType, ViewMode
 } from '../types';
 import { mockShifts, mockWorkers, mockParts, mockTasks, mockTaskNotes, mockTaskTimeLogs, mockShiftReports } from '../data/mockData';
+import { persistenceService } from '../services/persistenceService';
+import { realtimeService } from '../services/realtimeService';
+import { hasValidCredentials } from '../services/supabase';
 import {
   saveShift, saveWorker, savePart, saveTask, saveTaskNote, saveTimeLog,
   deleteShift as dbDeleteShift, deleteWorker as dbDeleteWorker, deleteTask as dbDeleteTask,
@@ -44,6 +47,7 @@ interface ShopState {
   isOnline: boolean;
   lastSyncTime: string | null;
   pendingChanges: string[];
+  isInitialized: boolean;
   
   // Actions
   setSelectedTaskId: (id: string | null) => void;
@@ -53,6 +57,7 @@ interface ShopState {
   setViewMode: (mode: ViewMode) => void;
   
   // Sync actions
+  initializeApp: () => Promise<void>;
   syncData: () => Promise<void>;
   loadCloudData: () => Promise<void>;
   markPendingChange: (changeId: string) => void;
@@ -158,6 +163,7 @@ export const useShopStore = create(
       isOnline: isOnline(),
       lastSyncTime: null,
       pendingChanges: [],
+      isInitialized: false,
       
       setSelectedTaskId: (id) => set({ selectedTaskId: id }),
       setTaskModalOpen: (isOpen) => set({ isTaskModalOpen: isOpen }),
@@ -170,15 +176,37 @@ export const useShopStore = create(
           pendingChanges: [...new Set([...state.pendingChanges, changeId])]
         }));
       },
+
+      initializeApp: async () => {
+        const state = get();
+        if (state.isInitialized) return;
+
+        console.log('Initializing application...');
+        
+        try {
+          // Initialize real-time subscriptions
+          await realtimeService.initialize();
+          
+          // Load initial data
+          await state.loadCloudData();
+          
+          set({ isInitialized: true });
+          console.log('Application initialized successfully');
+        } catch (error) {
+          console.error('Failed to initialize application:', error);
+          set({ isInitialized: true }); // Mark as initialized even if failed
+        }
+      },
       
       syncData: async () => {
         const state = get();
-        if (!isOnline()) {
-          console.log('Offline - sync deferred');
+        if (!hasValidCredentials() || !isOnline()) {
+          console.log('Cannot sync - no connection or credentials');
           return;
         }
         
         try {
+          console.log('Starting data sync...');
           await syncAllData({
             shifts: state.shifts,
             workers: state.workers,
@@ -196,26 +224,30 @@ export const useShopStore = create(
           console.log('Data synced successfully');
         } catch (error) {
           console.error('Sync failed:', error);
+          throw error;
         }
       },
       
       loadCloudData: async () => {
-        if (!isOnline()) {
-          console.log('Offline - using local data');
+        if (!hasValidCredentials()) {
+          console.log('No Supabase credentials - using local data only');
           return;
         }
         
         try {
+          console.log('Loading data from cloud...');
           const cloudData = await loadAllCloudData();
           if (cloudData) {
             set({
               ...cloudData,
-              lastSyncTime: new Date().toISOString()
+              lastSyncTime: new Date().toISOString(),
+              pendingChanges: []
             });
             console.log('Cloud data loaded successfully');
           }
         } catch (error) {
           console.error('Failed to load cloud data:', error);
+          // Continue with local data
         }
       },
       
@@ -265,11 +297,8 @@ export const useShopStore = create(
           shifts: [...state.shifts, newShift]
         }));
         
-        // Sync to cloud
-        saveShift(newShift).catch(error => {
-          console.error('Failed to save shift:', error);
-          get().markPendingChange(`shift-${newShift.id}`);
-        });
+        // Persist to cloud/local
+        persistenceService.saveData('shifts', newShift, 'create');
       },
       
       updateShift: (id, updates) => {
@@ -281,22 +310,19 @@ export const useShopStore = create(
         
         const updatedShift = get().shifts.find(s => s.id === id);
         if (updatedShift) {
-          saveShift(updatedShift).catch(error => {
-            console.error('Failed to update shift:', error);
-            get().markPendingChange(`shift-${id}`);
-          });
+          persistenceService.saveData('shifts', updatedShift, 'update');
         }
       },
       
       deleteShift: (id) => {
+        const shiftToDelete = get().shifts.find(s => s.id === id);
         set((state) => ({
           shifts: state.shifts.filter((shift) => shift.id !== id)
         }));
         
-        dbDeleteShift(id).catch(error => {
-          console.error('Failed to delete shift:', error);
-          get().markPendingChange(`shift-delete-${id}`);
-        });
+        if (shiftToDelete) {
+          persistenceService.saveData('shifts', { ...shiftToDelete, deleted_at: new Date().toISOString() }, 'delete');
+        }
       },
       
       addTask: (taskData) => {
@@ -322,11 +348,8 @@ export const useShopStore = create(
           parts: [...state.parts, newPart]
         }));
         
-        // Sync part to cloud
-        savePart(newPart).catch(error => {
-          console.error('Failed to save part:', error);
-          get().markPendingChange(`part-${newPart.id}`);
-        });
+        // Persist part
+        persistenceService.saveData('parts', newPart, 'create');
 
         const newTask: Task = {
           id: `task-${Date.now()}`,
@@ -347,11 +370,8 @@ export const useShopStore = create(
           tasks: [...state.tasks, newTask]
         }));
         
-        // Sync task to cloud
-        saveTask(newTask).catch(error => {
-          console.error('Failed to save task:', error);
-          get().markPendingChange(`task-${newTask.id}`);
-        });
+        // Persist task
+        persistenceService.saveData('tasks', newTask, 'create');
 
         return newTask;
       },
@@ -367,22 +387,19 @@ export const useShopStore = create(
         
         const updatedTask = get().tasks.find(t => t.id === taskId);
         if (updatedTask) {
-          saveTask(updatedTask).catch(error => {
-            console.error('Failed to update task:', error);
-            get().markPendingChange(`task-${taskId}`);
-          });
+          persistenceService.saveData('tasks', updatedTask, 'update');
         }
       },
       
       deleteTask: (taskId) => {
+        const taskToDelete = get().tasks.find(t => t.id === taskId);
         set((state) => ({
           tasks: state.tasks.filter((task) => task.id !== taskId)
         }));
         
-        dbDeleteTask(taskId).catch(error => {
-          console.error('Failed to delete task:', error);
-          get().markPendingChange(`task-delete-${taskId}`);
-        });
+        if (taskToDelete) {
+          persistenceService.saveData('tasks', { ...taskToDelete, deleted_at: new Date().toISOString() }, 'delete');
+        }
       },
       
       moveTaskToShift: (taskId, newShiftId) => {
@@ -396,10 +413,7 @@ export const useShopStore = create(
         
         const updatedTask = get().tasks.find(t => t.id === taskId);
         if (updatedTask) {
-          saveTask(updatedTask).catch(error => {
-            console.error('Failed to move task:', error);
-            get().markPendingChange(`task-${taskId}`);
-          });
+          persistenceService.saveData('tasks', updatedTask, 'update');
         }
       },
       
@@ -419,10 +433,7 @@ export const useShopStore = create(
         
         const updatedTask = get().tasks.find(t => t.id === taskId);
         if (updatedTask) {
-          saveTask(updatedTask).catch(error => {
-            console.error('Failed to carry over task:', error);
-            get().markPendingChange(`task-${taskId}`);
-          });
+          persistenceService.saveData('tasks', updatedTask, 'update');
         }
       },
       
@@ -440,10 +451,7 @@ export const useShopStore = create(
           workers: [...state.workers, newWorker]
         }));
         
-        saveWorker(newWorker).catch(error => {
-          console.error('Failed to save worker:', error);
-          get().markPendingChange(`worker-${workerId}`);
-        });
+        persistenceService.saveData('workers', newWorker, 'create');
         
         return workerId;
       },
@@ -463,10 +471,7 @@ export const useShopStore = create(
         
         const updatedTask = get().tasks.find(t => t.id === taskId);
         if (updatedTask) {
-          saveTask(updatedTask).catch(error => {
-            console.error('Failed to assign worker:', error);
-            get().markPendingChange(`task-${taskId}`);
-          });
+          persistenceService.saveData('tasks', updatedTask, 'update');
         }
       },
       
@@ -485,14 +490,12 @@ export const useShopStore = create(
         
         const updatedTask = get().tasks.find(t => t.id === taskId);
         if (updatedTask) {
-          saveTask(updatedTask).catch(error => {
-            console.error('Failed to remove worker:', error);
-            get().markPendingChange(`task-${taskId}`);
-          });
+          persistenceService.saveData('tasks', updatedTask, 'update');
         }
       },
 
       deleteWorker: (workerId) => {
+        const workerToDelete = get().workers.find(w => w.id === workerId);
         set((state) => ({
           workers: state.workers.filter((w) => w.id !== workerId),
           tasks: state.tasks.map((task) => ({
@@ -501,10 +504,9 @@ export const useShopStore = create(
           }))
         }));
         
-        dbDeleteWorker(workerId).catch(error => {
-          console.error('Failed to delete worker:', error);
-          get().markPendingChange(`worker-delete-${workerId}`);
-        });
+        if (workerToDelete) {
+          persistenceService.saveData('workers', { ...workerToDelete, deleted_at: new Date().toISOString() }, 'delete');
+        }
       },
       
       startTaskTimer: (taskId, workerId) => {
@@ -520,10 +522,7 @@ export const useShopStore = create(
           taskTimeLogs: [...state.taskTimeLogs, newTimeLog]
         }));
         
-        saveTimeLog(newTimeLog).catch(error => {
-          console.error('Failed to save time log:', error);
-          get().markPendingChange(`timelog-${timeLogId}`);
-        });
+        persistenceService.saveData('time_logs', newTimeLog, 'create');
       },
       
       stopTaskTimer: (taskId) => {
@@ -546,10 +545,7 @@ export const useShopStore = create(
           }));
           
           const finalTimeLog = { ...updatedTimeLog, endTime, duration };
-          saveTimeLog(finalTimeLog).catch(error => {
-            console.error('Failed to update time log:', error);
-            get().markPendingChange(`timelog-${updatedTimeLog.id}`);
-          });
+          persistenceService.saveData('time_logs', finalTimeLog, 'update');
         }
       },
       
@@ -564,10 +560,7 @@ export const useShopStore = create(
           taskNotes: [...state.taskNotes, newNote]
         }));
         
-        saveTaskNote(newNote).catch(error => {
-          console.error('Failed to save note:', error);
-          get().markPendingChange(`note-${newNote.id}`);
-        });
+        persistenceService.saveData('task_notes', newNote, 'create');
       },
       
       generateHandoverReport: (shiftId, date) => {
@@ -972,38 +965,10 @@ export const useShopStore = create(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          // Load cloud data on app start
+          // Initialize the app after rehydration
           setTimeout(() => {
-            state.loadCloudData();
-          }, 1000);
-          
-          // Set up periodic sync
-          setInterval(() => {
-            if (state.pendingChanges.length > 0) {
-              state.syncData();
-            }
-          }, 30000); // Sync every 30 seconds if there are pending changes
-          
-          // Listen for online/offline events
-          window.addEventListener('online', () => {
-            state.syncData();
-          });
-          
-          window.addEventListener('beforeunload', () => {
-            if (state.pendingChanges.length > 0) {
-              // Try to sync before page unload
-              navigator.sendBeacon('/api/sync', JSON.stringify({
-                data: {
-                  shifts: state.shifts,
-                  workers: state.workers,
-                  parts: state.parts,
-                  tasks: state.tasks,
-                  taskNotes: state.taskNotes,
-                  taskTimeLogs: state.taskTimeLogs
-                }
-              }));
-            }
-          });
+            state.initializeApp();
+          }, 100);
         }
       }
     }

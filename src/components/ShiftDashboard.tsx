@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format, parseISO, isAfter, startOfDay } from 'date-fns';
 import { 
   Plus, CheckCircle2, ClipboardList, Calendar, ZoomIn, ZoomOut, 
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useShopStore } from '../store/useShopStore';
 import { ViewMode } from '../types';
+import { persistenceService } from '../services/persistenceService';
 import ShiftHeader from './ShiftHeader';
 import ShiftColumn from './ShiftColumn';
 import TaskModal from './TaskModal';
@@ -19,6 +20,7 @@ import NotesExporter from './NotesExporter';
 import ShiftNotesPanel from './ShiftNotesPanel';
 import UserSelector from './UserSelector';
 import OfflineNotice from './OfflineNotice';
+import ConnectionStatus from './ConnectionStatus';
 
 const ShiftDashboard: React.FC = () => {
   const { 
@@ -32,6 +34,7 @@ const ShiftDashboard: React.FC = () => {
     currentUser,
     viewMode,
     pendingChanges,
+    isInitialized,
     setSelectedDate,
     setSelectedTaskId,
     setTaskModalOpen,
@@ -41,7 +44,8 @@ const ShiftDashboard: React.FC = () => {
     carryOverTask,
     getCarriedOverTasks,
     isStartChecklistComplete,
-    isEndCleanupComplete
+    isEndCleanupComplete,
+    initializeApp
   } = useShopStore();
   
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
@@ -51,10 +55,27 @@ const ShiftDashboard: React.FC = () => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [showSimpleView, setShowSimpleView] = useState(false);
   const [showCalendarView, setShowCalendarView] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   
   const currentDate = selectedDate || format(new Date(), 'yyyy-MM-dd');
   const taskSummary = getTaskSummaryForDate(currentDate);
   const isFutureDate = isAfter(startOfDay(new Date(currentDate)), startOfDay(new Date()));
+  
+  // Initialize app on mount
+  useEffect(() => {
+    if (!isInitialized) {
+      initializeApp();
+    }
+  }, [isInitialized, initializeApp]);
+
+  // Update pending count
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPendingCount(persistenceService.getPendingOperationsCount());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
   
   // Get filtered tasks based on view mode
   const filteredTasks = getFilteredTasks();
@@ -195,8 +216,13 @@ const ShiftDashboard: React.FC = () => {
         <ShiftHeader onDateChange={handleDateChange} />
         <StatsBar stats={statsData} />
         
+        {/* Connection Status */}
+        <div className="px-4 py-2">
+          <ConnectionStatus />
+        </div>
+        
         {/* Offline Notice */}
-        <OfflineNotice pendingChanges={pendingChanges.length} />
+        <OfflineNotice pendingChanges={pendingCount} />
         
         <div className="bg-white border-b border-neutral-200 px-4 py-2">
           <div className="flex items-center justify-between">

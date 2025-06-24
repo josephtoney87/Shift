@@ -4,73 +4,52 @@ import type { Database } from '../types/supabase';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-let supabase: any;
+// Use placeholder values for demo if not configured
+const url = supabaseUrl || 'https://your-project.supabase.co';
+const key = supabaseAnonKey || 'your-anon-key';
 
-// For local development, create a mock client if credentials are missing
-if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project.supabase.co') {
-  console.warn('Supabase credentials not configured. Running in local-only mode.');
-  
-  // Create a mock query builder that supports method chaining
-  const createMockQueryBuilder = () => {
-    const mockQueryBuilder = {
-      select: function() { return this; },
-      insert: function() { return this; },
-      update: function() { return this; },
-      delete: function() { return this; },
-      eq: function() { return this; },
-      is: function() { return this; },
-      single: function() { return this; },
-      order: function() { return this; },
-      limit: function() { return this; },
-      gte: function() { return this; },
-      lte: function() { return this; },
-      gt: function() { return this; },
-      lt: function() { return this; },
-      neq: function() { return this; },
-      in: function() { return this; },
-      contains: function() { return this; },
-      filter: function() { return this; },
-      match: function() { return this; },
-      range: function() { return this; },
-      // Make it awaitable by implementing then()
-      then: function(resolve: any) {
-        return resolve({ data: [], error: null });
-      },
-      // Support for promise-like behavior
-      catch: function() { return this; },
-      finally: function() { return this; }
-    };
-    return mockQueryBuilder;
-  };
-  
-  // Create a mock client that returns empty data
-  supabase = {
-    auth: {
-      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-    },
-    from: () => createMockQueryBuilder(),
-    channel: () => ({
-      on: function() { return this; },
-      subscribe: () => {},
-    }),
-    removeChannel: () => {},
-  };
-} else {
-  supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-    db: {
-      schema: 'public',
-    },
-    realtime: {
-      params: {
-        eventsPerSecond: 10
-      }
+export const supabase = createClient<Database>(url, key, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+  db: {
+    schema: 'public',
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
     }
-  });
-}
+  }
+});
 
-export { supabase };
+// Check if we have valid credentials
+export const hasValidCredentials = () => {
+  return supabaseUrl && 
+         supabaseAnonKey && 
+         supabaseUrl !== 'https://your-project.supabase.co' &&
+         supabaseAnonKey !== 'your-anon-key';
+};
+
+// Initialize the connection and create demo user if needed
+export const initializeSupabase = async () => {
+  if (!hasValidCredentials()) {
+    console.warn('Supabase not configured. Using local storage only.');
+    return null;
+  }
+
+  try {
+    // Check connection
+    const { data, error } = await supabase.from('shifts').select('*').limit(1);
+    if (error) {
+      console.error('Supabase connection error:', error);
+      return null;
+    }
+    
+    console.log('Supabase connected successfully');
+    return supabase;
+  } catch (error) {
+    console.error('Failed to initialize Supabase:', error);
+    return null;
+  }
+};

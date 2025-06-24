@@ -965,6 +965,11 @@ export const useShopStore = create(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
+          // Ensure currentUser is always defined after rehydration
+          if (!state.currentUser) {
+            state.currentUser = defaultUser;
+          }
+          
           // Initialize the app after rehydration
           setTimeout(() => {
             state.initializeApp();

@@ -283,11 +283,11 @@ const ShiftDashboard: React.FC = () => {
                 <div className="ml-4 flex items-center space-x-2 text-sm text-neutral-600">
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-medium"
-                    style={{ backgroundColor: currentUser.color }}
+                    style={{ backgroundColor: currentUser?.color || '#6b7280' }}
                   >
-                    {currentUser.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    {(currentUser?.name || '').split(' ').map(n => n[0]).join('').slice(0, 2)}
                   </div>
-                  <span>{currentUser.name}</span>
+                  <span>{currentUser?.name || ''}</span>
                   <span>•</span>
                   <span className="font-medium">
                     {viewMode === ViewMode.MY_VIEW ? 'My View' : 'All Data'}

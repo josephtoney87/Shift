@@ -965,8 +965,8 @@ export const useShopStore = create(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          // Ensure currentUser is always defined after rehydration
-          if (!state.currentUser) {
+          // Ensure currentUser is always defined and has a valid id after rehydration
+          if (!state.currentUser || !state.currentUser.id) {
             state.currentUser = defaultUser;
           }
           

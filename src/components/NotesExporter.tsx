@@ -2,6 +2,7 @@ import React from 'react';
 import { Download, FileText, Calendar } from 'lucide-react';
 import { useShopStore } from '../store/useShopStore';
 import { format, parseISO } from 'date-fns';
+import Tooltip from './Tooltip';
 
 interface NotesExporterProps {
   date?: string;
@@ -151,22 +152,24 @@ const NotesExporter: React.FC<NotesExporterProps> = ({
 
   return (
     <div className={`flex items-center space-x-2 ${className}`}>
-      <button
-        onClick={exportToText}
-        className="flex items-center px-3 py-2 bg-neutral-600 text-white rounded-md hover:bg-neutral-700 text-sm"
-        title="Export notes as text file"
-      >
-        <FileText className="h-4 w-4 mr-1" />
-        Export TXT
-      </button>
-      <button
-        onClick={exportToCSV}
-        className="flex items-center px-3 py-2 bg-success-600 text-white rounded-md hover:bg-success-700 text-sm"
-        title="Export notes as CSV file"
-      >
-        <Download className="h-4 w-4 mr-1" />
-        Export CSV
-      </button>
+      <Tooltip content="Export notes as a text file for documentation" position="bottom">
+        <button
+          onClick={exportToText}
+          className="flex items-center px-3 py-2 bg-neutral-600 text-white rounded-md hover:bg-neutral-700 text-sm"
+        >
+          <FileText className="h-4 w-4 mr-1" />
+          Export TXT
+        </button>
+      </Tooltip>
+      <Tooltip content="Export notes as a CSV file for spreadsheet analysis" position="bottom">
+        <button
+          onClick={exportToCSV}
+          className="flex items-center px-3 py-2 bg-success-600 text-white rounded-md hover:bg-success-700 text-sm"
+        >
+          <Download className="h-4 w-4 mr-1" />
+          Export CSV
+        </button>
+      </Tooltip>
     </div>
   );
 };

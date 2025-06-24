@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Calendar, FileText, X } from 'lucide-react';
 import { useShopStore } from '../store/useShopStore';
 import { format, parseISO } from 'date-fns';
+import Tooltip from './Tooltip';
 
 interface SearchBarProps {
   onSearchResult: (result: { type: 'date' | 'workOrder'; value: string; taskId?: string }) => void;
@@ -92,14 +93,19 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearchResult }) => {
           placeholder="Search work orders or dates (YYYY-MM-DD)..."
           className="w-full pl-10 pr-10 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
         />
-        {searchTerm && (
-          <button
-            onClick={clearSearch}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
+        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
+          <Tooltip content="Search by work order number or date to find existing shift records" position="left">
+            <div />
+          </Tooltip>
+          {searchTerm && (
+            <button
+              onClick={clearSearch}
+              className="text-neutral-400 hover:text-neutral-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {isOpen && searchResults.length > 0 && (

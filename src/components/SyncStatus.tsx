@@ -3,6 +3,7 @@ import { Cloud, CloudOff, Wifi, WifiOff, RefreshCw, Check, AlertTriangle, Databa
 import { useShopStore } from '../store/useShopStore';
 import { hasValidCredentials } from '../services/supabase';
 import { persistenceService } from '../services/persistenceService';
+import Tooltip from './Tooltip';
 
 const SyncStatus: React.FC = () => {
   const { 
@@ -97,6 +98,22 @@ const SyncStatus: React.FC = () => {
     return <Check className="h-4 w-4" />;
   };
 
+  const getTooltipContent = () => {
+    if (!hasValidCredentials()) {
+      return 'Running in local mode only. Configure Supabase to enable cloud sync';
+    }
+    if (!isOnline) {
+      return 'You are offline. Changes will sync when connection is restored';
+    }
+    if (syncError) {
+      return 'Sync failed. Click the refresh button to retry syncing';
+    }
+    if (pendingCount > 0) {
+      return `${pendingCount} changes waiting to sync. Click refresh to sync now`;
+    }
+    return 'All changes are synced to the cloud. All users see live data';
+  };
+
   if (!isInitialized) {
     return (
       <div className="flex items-center space-x-2 text-sm">
@@ -107,71 +124,77 @@ const SyncStatus: React.FC = () => {
   }
 
   return (
-    <div className="flex items-center space-x-2 text-sm">
-      {/* Network Status */}
-      <div className="flex items-center">
-        {isOnline ? (
-          <Wifi className="h-4 w-4 text-success-500" />
-        ) : (
-          <WifiOff className="h-4 w-4 text-error-500" />
+    <Tooltip content={getTooltipContent()} position="bottom">
+      <div className="flex items-center space-x-2 text-sm">
+        {/* Network Status */}
+        <div className="flex items-center">
+          {isOnline ? (
+            <Wifi className="h-4 w-4 text-success-500" />
+          ) : (
+            <WifiOff className="h-4 w-4 text-error-500" />
+          )}
+        </div>
+
+        {/* Sync Status */}
+        <div className={`flex items-center space-x-1 ${getStatusColor()}`}>
+          {getStatusIcon()}
+          <span>{getStatusText()}</span>
+        </div>
+
+        {/* Action Buttons */}
+        {hasValidCredentials() && isOnline && (
+          <>
+            <Tooltip content="Sync changes to cloud now" position="bottom">
+              <button
+                onClick={handleSync}
+                disabled={isSyncing}
+                className="p-1 rounded hover:bg-neutral-100 disabled:opacity-50"
+                title="Sync now"
+              >
+                <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              </button>
+            </Tooltip>
+
+            <Tooltip content="Load latest data from cloud" position="bottom">
+              <button
+                onClick={handleLoadCloud}
+                disabled={isSyncing}
+                className="p-1 rounded hover:bg-neutral-100 disabled:opacity-50"
+                title="Load latest from cloud"
+              >
+                <CloudOff className="h-4 w-4" />
+              </button>
+            </Tooltip>
+          </>
+        )}
+
+        {/* Last Sync Time */}
+        {lastSyncTime && hasValidCredentials() && (
+          <span className="text-xs text-neutral-500">
+            {new Date(lastSyncTime).toLocaleTimeString()}
+          </span>
+        )}
+        
+        {/* Status Messages */}
+        {syncError && (
+          <div className="text-xs text-error-600 bg-error-50 px-2 py-1 rounded">
+            {syncError}
+          </div>
+        )}
+
+        {!hasValidCredentials() && (
+          <div className="text-xs text-warning-600 bg-warning-50 px-2 py-1 rounded">
+            Local storage only
+          </div>
+        )}
+
+        {hasValidCredentials() && !isOnline && (
+          <div className="text-xs text-error-600 bg-error-50 px-2 py-1 rounded">
+            Changes saved locally
+          </div>
         )}
       </div>
-
-      {/* Sync Status */}
-      <div className={`flex items-center space-x-1 ${getStatusColor()}`}>
-        {getStatusIcon()}
-        <span>{getStatusText()}</span>
-      </div>
-
-      {/* Action Buttons */}
-      {hasValidCredentials() && isOnline && (
-        <>
-          <button
-            onClick={handleSync}
-            disabled={isSyncing}
-            className="p-1 rounded hover:bg-neutral-100 disabled:opacity-50"
-            title="Sync now"
-          >
-            <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-          </button>
-
-          <button
-            onClick={handleLoadCloud}
-            disabled={isSyncing}
-            className="p-1 rounded hover:bg-neutral-100 disabled:opacity-50"
-            title="Load latest from cloud"
-          >
-            <CloudOff className="h-4 w-4" />
-          </button>
-        </>
-      )}
-
-      {/* Last Sync Time */}
-      {lastSyncTime && hasValidCredentials() && (
-        <span className="text-xs text-neutral-500">
-          {new Date(lastSyncTime).toLocaleTimeString()}
-        </span>
-      )}
-      
-      {/* Status Messages */}
-      {syncError && (
-        <div className="text-xs text-error-600 bg-error-50 px-2 py-1 rounded">
-          {syncError}
-        </div>
-      )}
-
-      {!hasValidCredentials() && (
-        <div className="text-xs text-warning-600 bg-warning-50 px-2 py-1 rounded">
-          Local storage only
-        </div>
-      )}
-
-      {hasValidCredentials() && !isOnline && (
-        <div className="text-xs text-error-600 bg-error-50 px-2 py-1 rounded">
-          Changes saved locally
-        </div>
-      )}
-    </div>
+    </Tooltip>
   );
 };
 

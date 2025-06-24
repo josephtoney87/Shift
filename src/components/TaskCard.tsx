@@ -7,6 +7,7 @@ import {
 import { TaskPriority, TaskStatus, Task, Worker, Part, TaskTimeLog } from '../types';
 import { useShopStore } from '../store/useShopStore';
 import { formatDistanceToNow } from 'date-fns';
+import Tooltip from './Tooltip';
 
 interface TaskCardProps {
   task: Task & { 
@@ -168,53 +169,60 @@ const TaskCard: React.FC<TaskCardProps> = ({
             
             <div className="flex items-center space-x-2">
               {onMoveBack && (
-                <button
-                  onClick={(e) => handleMoveTask(e, 'back')}
-                  className="p-1.5 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-                  title="Move to previous shift"
-                >
-                  <ArrowLeftCircle className="h-4 w-4" />
-                </button>
+                <Tooltip content="Move to previous shift" position="top">
+                  <button
+                    onClick={(e) => handleMoveTask(e, 'back')}
+                    className="p-1.5 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                  >
+                    <ArrowLeftCircle className="h-4 w-4" />
+                  </button>
+                </Tooltip>
               )}
 
               {task.status === TaskStatus.COMPLETED && (
-                <button
-                  onClick={handleAddBack}
-                  className="p-1.5 rounded-full bg-warning-100 text-warning-600 hover:bg-warning-200 flex items-center"
-                  title="Mark as pending"
-                >
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  <span className="text-xs">Add Back</span>
-                </button>
+                <Tooltip content="Mark as pending to work on again" position="top">
+                  <button
+                    onClick={handleAddBack}
+                    className="p-1.5 rounded-full bg-warning-100 text-warning-600 hover:bg-warning-200 flex items-center"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                    <span className="text-xs">Add Back</span>
+                  </button>
+                </Tooltip>
               )}
 
               {task.status === TaskStatus.COMPLETED && (
-                <button
-                  onClick={handleContinueTask}
-                  className="p-1.5 rounded-full bg-primary-100 text-primary-600 hover:bg-primary-200 flex items-center"
-                  title="Continue working on task"
-                >
-                  <RotateCcw className="h-4 w-4 mr-1" />
-                  <span className="text-xs">Continue</span>
-                </button>
+                <Tooltip content="Continue working on this completed task" position="top">
+                  <button
+                    onClick={handleContinueTask}
+                    className="p-1.5 rounded-full bg-primary-100 text-primary-600 hover:bg-primary-200 flex items-center"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-1" />
+                    <span className="text-xs">Continue</span>
+                  </button>
+                </Tooltip>
               )}
               
               {task.status !== TaskStatus.COMPLETED && task.workers.length > 0 && (
-                <button
-                  onClick={handleTimerClick}
-                  className={`p-1.5 rounded-full ${
-                    task.activeTimeLog
-                      ? 'bg-error-100 text-error-600 hover:bg-error-200'
-                      : 'bg-success-100 text-success-600 hover:bg-success-200'
-                  }`}
-                  title={task.activeTimeLog ? 'Stop timer' : 'Start timer'}
+                <Tooltip 
+                  content={task.activeTimeLog ? 'Stop time tracking for this task' : 'Start time tracking for this task'}
+                  position="top"
                 >
-                  {task.activeTimeLog ? (
-                    <Square className="h-4 w-4" />
-                  ) : (
-                    <Play className="h-4 w-4" />
-                  )}
-                </button>
+                  <button
+                    onClick={handleTimerClick}
+                    className={`p-1.5 rounded-full ${
+                      task.activeTimeLog
+                        ? 'bg-error-100 text-error-600 hover:bg-error-200'
+                        : 'bg-success-100 text-success-600 hover:bg-success-200'
+                    }`}
+                  >
+                    {task.activeTimeLog ? (
+                      <Square className="h-4 w-4" />
+                    ) : (
+                      <Play className="h-4 w-4" />
+                    )}
+                  </button>
+                </Tooltip>
               )}
               
               {task.status === TaskStatus.COMPLETED && !task.activeTimeLog && (
@@ -222,13 +230,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
               )}
 
               {onMoveForward && (
-                <button
-                  onClick={(e) => handleMoveTask(e, 'forward')}
-                  className="p-1.5 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-                  title="Move to next shift"
-                >
-                  <ArrowRightCircle className="h-4 w-4" />
-                </button>
+                <Tooltip content="Move to next shift" position="top">
+                  <button
+                    onClick={(e) => handleMoveTask(e, 'forward')}
+                    className="p-1.5 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                  >
+                    <ArrowRightCircle className="h-4 w-4" />
+                  </button>
+                </Tooltip>
               )}
             </div>
           </div>

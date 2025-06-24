@@ -4,6 +4,7 @@ import { Calendar, Plus, AlertCircle } from 'lucide-react';
 import { useShopStore } from '../store/useShopStore';
 import { ShiftType, TaskStatus, TaskPriority } from '../types';
 import SyncStatus from './SyncStatus';
+import Tooltip from './Tooltip';
 
 interface ShiftHeaderProps {
   onDateChange: (date: string) => void;
@@ -79,45 +80,53 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
           <h1 className="text-2xl font-bold mb-4 md:mb-0">CNC Shop Shift Management</h1>
           
           <div className="flex items-center space-x-4">
-            {/* Sync Status */}
-            <SyncStatus />
-            
-            <div className="relative flex items-center group">
-              <Calendar className="absolute left-3 text-primary-200" size={18} />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={handleDateChange}
-                className={`pl-10 pr-4 py-2 rounded-md border ${
-                  hasTasksForDate 
-                    ? 'bg-warning-100 border-warning-300 text-warning-900' 
-                    : 'bg-primary-700 border-primary-600'
-                } focus:outline-none focus:ring-2 focus:ring-primary-500`}
-              />
-              <div className="absolute hidden group-hover:block bottom-full left-0 mb-2 w-64 p-2 bg-neutral-800 text-sm text-white rounded shadow-lg">
-                Click on any date to view or manage tasks. Data syncs across all devices.
+            {/* Sync Status with Tooltip */}
+            <Tooltip content="Shows whether changes are synced to the server. Click to retry sync if offline" position="bottom">
+              <div>
+                <SyncStatus />
               </div>
-            </div>
+            </Tooltip>
+            
+            <Tooltip content="Select the date to view or manage tasks for that shift" position="bottom">
+              <div className="relative flex items-center group">
+                <Calendar className="absolute left-3 text-primary-200" size={18} />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  className={`pl-10 pr-4 py-2 rounded-md border ${
+                    hasTasksForDate 
+                      ? 'bg-warning-100 border-warning-300 text-warning-900' 
+                      : 'bg-primary-700 border-primary-600'
+                  } focus:outline-none focus:ring-2 focus:ring-primary-500`}
+                />
+              </div>
+            </Tooltip>
             
             <div className="flex space-x-2">
               {shifts.map((shift) => (
-                <div 
-                  key={shift.id} 
-                  className="flex flex-col items-center bg-primary-700 p-2 rounded-md"
+                <Tooltip
+                  key={shift.id}
+                  content="Shows the current shift and its hours. Select to change the shift view"
+                  position="bottom"
                 >
-                  <span className="font-semibold">Shift {shift.type}</span>
-                  <span className="text-sm text-primary-200">
-                    {shift.startTime} - {shift.endTime}
-                  </span>
-                </div>
+                  <div className="flex flex-col items-center bg-primary-700 p-2 rounded-md">
+                    <span className="font-semibold">Shift {shift.type}</span>
+                    <span className="text-sm text-primary-200">
+                      {shift.startTime} - {shift.endTime}
+                    </span>
+                  </div>
+                </Tooltip>
               ))}
               
-              <button
-                onClick={() => setShowAddShift(true)}
-                className="p-2 bg-primary-600 rounded-md hover:bg-primary-700 transition-colors"
-              >
-                <Plus className="h-5 w-5" />
-              </button>
+              <Tooltip content="Add a new shift with custom hours" position="bottom">
+                <button
+                  onClick={() => setShowAddShift(true)}
+                  className="p-2 bg-primary-600 rounded-md hover:bg-primary-700 transition-colors"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>

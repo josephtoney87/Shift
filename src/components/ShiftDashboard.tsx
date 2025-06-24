@@ -21,6 +21,7 @@ import ShiftNotesPanel from './ShiftNotesPanel';
 import UserSelector from './UserSelector';
 import OfflineNotice from './OfflineNotice';
 import ConnectionStatus from './ConnectionStatus';
+import Tooltip from './Tooltip';
 
 const ShiftDashboard: React.FC = () => {
   const { 
@@ -228,15 +229,17 @@ const ShiftDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               {/* CRITICAL: Calendar button with warning indicator for incomplete checklists */}
-              <button
-                onClick={() => setShowCalendarView(true)}
-                className="mr-3 p-2 hover:bg-neutral-100 rounded-md relative"
-              >
-                <Calendar className="h-5 w-5 text-neutral-500" />
-                {hasIncompleteChecklists && (
-                  <AlertTriangle className="absolute -top-1 -right-1 h-4 w-4 text-error-600" />
-                )}
-              </button>
+              <Tooltip content="Select the date to view or manage tasks for that shift" position="bottom">
+                <button
+                  onClick={() => setShowCalendarView(true)}
+                  className="mr-3 p-2 hover:bg-neutral-100 rounded-md relative"
+                >
+                  <Calendar className="h-5 w-5 text-neutral-500" />
+                  {hasIncompleteChecklists && (
+                    <AlertTriangle className="absolute -top-1 -right-1 h-4 w-4 text-error-600" />
+                  )}
+                </button>
+              </Tooltip>
               <SearchBar onSearchResult={handleSearchResult} />
             </div>
             
@@ -291,35 +294,43 @@ const ShiftDashboard: React.FC = () => {
             
             <div className="flex items-center space-x-4">
               <NotesExporter date={currentDate} />
-              <button
-                onClick={() => setShowSimpleView(true)}
-                className="p-2 bg-primary-100 text-primary-700 rounded-md hover:bg-primary-200 flex items-center"
-              >
-                <LayoutGrid className="h-4 w-4 mr-1" />
-                Simple View
-              </button>
+              <Tooltip content="Switch to simple view for a cleaner layout" position="bottom">
+                <button
+                  onClick={() => setShowSimpleView(true)}
+                  className="p-2 bg-primary-100 text-primary-700 rounded-md hover:bg-primary-200 flex items-center"
+                >
+                  <LayoutGrid className="h-4 w-4 mr-1" />
+                  Simple View
+                </button>
+              </Tooltip>
               <div className="flex items-center bg-neutral-100 rounded-lg p-1">
-                <button
-                  onClick={() => handleZoom('out')}
-                  className="p-1.5 hover:bg-neutral-200 rounded-md"
-                  title="Zoom Out"
-                >
-                  <ZoomOut className="h-4 w-4 text-neutral-700" />
-                </button>
-                <button
-                  onClick={() => handleZoom('reset')}
-                  className="p-1.5 hover:bg-neutral-200 rounded-md mx-1"
-                  title="Reset Zoom"
-                >
-                  <RotateCcw className="h-4 w-4 text-neutral-700" />
-                </button>
-                <button
-                  onClick={() => handleZoom('in')}
-                  className="p-1.5 hover:bg-neutral-200 rounded-md"
-                  title="Zoom In"
-                >
-                  <ZoomIn className="h-4 w-4 text-neutral-700" />
-                </button>
+                <Tooltip content="Zoom out to see more content" position="bottom">
+                  <button
+                    onClick={() => handleZoom('out')}
+                    className="p-1.5 hover:bg-neutral-200 rounded-md"
+                    title="Zoom Out"
+                  >
+                    <ZoomOut className="h-4 w-4 text-neutral-700" />
+                  </button>
+                </Tooltip>
+                <Tooltip content="Reset zoom to default level" position="bottom">
+                  <button
+                    onClick={() => handleZoom('reset')}
+                    className="p-1.5 hover:bg-neutral-200 rounded-md mx-1"
+                    title="Reset Zoom"
+                  >
+                    <RotateCcw className="h-4 w-4 text-neutral-700" />
+                  </button>
+                </Tooltip>
+                <Tooltip content="Zoom in to see more detail" position="bottom">
+                  <button
+                    onClick={() => handleZoom('in')}
+                    className="p-1.5 hover:bg-neutral-200 rounded-md"
+                    title="Zoom In"
+                  >
+                    <ZoomIn className="h-4 w-4 text-neutral-700" />
+                  </button>
+                </Tooltip>
               </div>
               <div className="text-sm text-neutral-600">
                 {taskSummary.total === 0 ? (
@@ -336,35 +347,50 @@ const ShiftDashboard: React.FC = () => {
         <div className="px-4 py-3 bg-white border-b border-neutral-200">
           <div className="flex flex-wrap gap-4">
             {shifts.map(shift => (
-              <button
+              <Tooltip 
                 key={shift.id}
-                onClick={() => handleAddTask(shift.id)}
-                className={`px-4 py-2 rounded-md flex items-center text-white ${
-                  shift.type === 'S1' ? 'bg-primary-600 hover:bg-primary-700' :
-                  shift.type === 'S2' ? 'bg-secondary-600 hover:bg-secondary-700' :
-                  'bg-neutral-600 hover:bg-neutral-700'
-                }`}
+                content="Create a new task for this shift with description, notes, priority, and assigned workers"
+                position="bottom"
               >
-                <Plus className="h-5 w-5 mr-2" />
-                Add Task to Shift {shift.type}
-              </button>
+                <button
+                  onClick={() => handleAddTask(shift.id)}
+                  className={`px-4 py-2 rounded-md flex items-center text-white ${
+                    shift.type === 'S1' ? 'bg-primary-600 hover:bg-primary-700' :
+                    shift.type === 'S2' ? 'bg-secondary-600 hover:bg-secondary-700' :
+                    'bg-neutral-600 hover:bg-neutral-700'
+                  }`}
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Add Task to Shift {shift.type}
+                </button>
+              </Tooltip>
             ))}
             {!isFutureDate && (
               <>
-                <button
-                  onClick={() => setShowStartOfShiftChecklist(true)}
-                  className="px-4 py-2 bg-accent-600 text-white rounded-md hover:bg-accent-700 flex items-center ml-auto"
+                <Tooltip 
+                  content="Begin the start of shift checklist including safety, calibration, and setup verification"
+                  position="bottom"
                 >
-                  <CheckCircle2 className="h-5 w-5 mr-2" />
-                  Start of Shift Checklist
-                </button>
-                <button
-                  onClick={() => setShowEndOfShiftCleanup(true)}
-                  className="px-4 py-2 bg-warning-600 text-white rounded-md hover:bg-warning-700 flex items-center"
+                  <button
+                    onClick={() => setShowStartOfShiftChecklist(true)}
+                    className="px-4 py-2 bg-accent-600 text-white rounded-md hover:bg-accent-700 flex items-center ml-auto"
+                  >
+                    <CheckCircle2 className="h-5 w-5 mr-2" />
+                    Start of Shift Checklist
+                  </button>
+                </Tooltip>
+                <Tooltip 
+                  content="Complete end of shift cleanup tasks such as lubrication, coolant inspection, and toolbox checks"
+                  position="bottom"
                 >
-                  <ClipboardList className="h-5 w-5 mr-2" />
-                  End of Shift Cleanup
-                </button>
+                  <button
+                    onClick={() => setShowEndOfShiftCleanup(true)}
+                    className="px-4 py-2 bg-warning-600 text-white rounded-md hover:bg-warning-700 flex items-center"
+                  >
+                    <ClipboardList className="h-5 w-5 mr-2" />
+                    End of Shift Cleanup
+                  </button>
+                </Tooltip>
               </>
             )}
           </div>

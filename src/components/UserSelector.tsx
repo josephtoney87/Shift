@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, Users, Plus, Eye, EyeOff, Palette } from 'lucide-react';
 import { useShopStore } from '../store/useShopStore';
 import { ViewMode } from '../types';
+import Tooltip from './Tooltip';
 
 const UserSelector: React.FC = () => {
   const { 
@@ -55,63 +56,71 @@ const UserSelector: React.FC = () => {
     <div className="flex items-center space-x-4">
       {/* View Mode Toggle */}
       <div className="flex items-center bg-neutral-100 rounded-lg p-1">
-        <button
-          onClick={() => setViewMode(ViewMode.MY_VIEW)}
-          className={`px-3 py-1.5 rounded-md text-sm flex items-center transition-colors ${
-            viewMode === ViewMode.MY_VIEW
-              ? 'bg-white text-neutral-800 shadow-sm'
-              : 'text-neutral-600 hover:text-neutral-800'
-          }`}
-        >
-          <Eye className="h-4 w-4 mr-1" />
-          My View
-        </button>
-        <button
-          onClick={() => setViewMode(ViewMode.ALL_DATA)}
-          className={`px-3 py-1.5 rounded-md text-sm flex items-center transition-colors ${
-            viewMode === ViewMode.ALL_DATA
-              ? 'bg-white text-neutral-800 shadow-sm'
-              : 'text-neutral-600 hover:text-neutral-800'
-          }`}
-        >
-          <EyeOff className="h-4 w-4 mr-1" />
-          All Data
-        </button>
+        <Tooltip content="Toggle to show only your tasks or tasks for all users" position="bottom">
+          <button
+            onClick={() => setViewMode(ViewMode.MY_VIEW)}
+            className={`px-3 py-1.5 rounded-md text-sm flex items-center transition-colors ${
+              viewMode === ViewMode.MY_VIEW
+                ? 'bg-white text-neutral-800 shadow-sm'
+                : 'text-neutral-600 hover:text-neutral-800'
+            }`}
+          >
+            <Eye className="h-4 w-4 mr-1" />
+            My View
+          </button>
+        </Tooltip>
+        <Tooltip content="Show tasks and data from all users in the system" position="bottom">
+          <button
+            onClick={() => setViewMode(ViewMode.ALL_DATA)}
+            className={`px-3 py-1.5 rounded-md text-sm flex items-center transition-colors ${
+              viewMode === ViewMode.ALL_DATA
+                ? 'bg-white text-neutral-800 shadow-sm'
+                : 'text-neutral-600 hover:text-neutral-800'
+            }`}
+          >
+            <EyeOff className="h-4 w-4 mr-1" />
+            All Data
+          </button>
+        </Tooltip>
       </div>
 
       {/* User Selector */}
       <div className="flex items-center space-x-2">
-        <div className="relative">
-          <select
-            value={currentUser?.id || ''}
-            onChange={(e) => {
-              const user = users.find(u => u.id === e.target.value);
-              if (user) setCurrentUser(user);
-            }}
-            className="appearance-none bg-white border border-neutral-300 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            style={{ 
-              borderLeftColor: currentUser?.color,
-              borderLeftWidth: '4px'
-            }}
-          >
-            {users.map(user => (
-              <option key={user.id} value={user.id}>
-                {user.name}
-              </option>
-            ))}
-          </select>
-          <User className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400 pointer-events-none" />
-        </div>
+        <Tooltip content="Select a user to view their scheduled tasks or assignments" position="bottom">
+          <div className="relative">
+            <select
+              value={currentUser?.id || ''}
+              onChange={(e) => {
+                const user = users.find(u => u.id === e.target.value);
+                if (user) setCurrentUser(user);
+              }}
+              className="appearance-none bg-white border border-neutral-300 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              style={{ 
+                borderLeftColor: currentUser?.color,
+                borderLeftWidth: '4px'
+              }}
+            >
+              {users.map(user => (
+                <option key={user.id} value={user.id}>
+                  {user.name}
+                </option>
+              ))}
+            </select>
+            <User className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400 pointer-events-none" />
+          </div>
+        </Tooltip>
 
         {/* Add User Button */}
-        <button
-          onClick={() => setShowAddUser(!showAddUser)}
-          disabled={users.length >= 10}
-          className="p-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          title={users.length >= 10 ? 'Maximum 10 users allowed' : 'Add new user'}
-        >
-          <Plus className="h-4 w-4" />
-        </button>
+        <Tooltip content="Add a new user to the system" position="bottom">
+          <button
+            onClick={() => setShowAddUser(!showAddUser)}
+            disabled={users.length >= 10}
+            className="p-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={users.length >= 10 ? 'Maximum 10 users allowed' : 'Add new user'}
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </Tooltip>
       </div>
 
       {/* Add User Form */}
@@ -176,28 +185,31 @@ const UserSelector: React.FC = () => {
       {/* User Management */}
       <div className="flex items-center space-x-1">
         {users.map(user => (
-          <div
+          <Tooltip
             key={user.id}
-            className={`relative group ${user.id === currentUser?.id ? 'ring-2 ring-primary-500' : ''}`}
+            content={`User: ${user.name} - Click to select, hover for options`}
+            position="bottom"
           >
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium cursor-pointer"
-              style={{ backgroundColor: user.color }}
-              onClick={() => setCurrentUser(user)}
-              title={user.name}
-            >
-              {user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-            </div>
-            
-            {users.length > 1 && (
-              <button
-                onClick={() => handleDeleteUser(user.id)}
-                className="absolute -top-1 -right-1 w-4 h-4 bg-error-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+            <div className={`relative group ${user.id === currentUser?.id ? 'ring-2 ring-primary-500' : ''}`}>
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium cursor-pointer"
+                style={{ backgroundColor: user.color }}
+                onClick={() => setCurrentUser(user)}
+                title={user.name}
               >
-                ×
-              </button>
-            )}
-          </div>
+                {user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+              </div>
+              
+              {users.length > 1 && (
+                <button
+                  onClick={() => handleDeleteUser(user.id)}
+                  className="absolute -top-1 -right-1 w-4 h-4 bg-error-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </Tooltip>
         ))}
       </div>
 

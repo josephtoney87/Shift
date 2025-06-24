@@ -45,8 +45,7 @@ const ShiftDashboard: React.FC = () => {
     carryOverTask,
     getCarriedOverTasks,
     isStartChecklistComplete,
-    isEndCleanupComplete,
-    initializeApp
+    isEndCleanupComplete
   } = useShopStore();
   
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
@@ -58,12 +57,14 @@ const ShiftDashboard: React.FC = () => {
   const [showCalendarView, setShowCalendarView] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   
-  // Initialize app on mount
+  // Update pending count
   useEffect(() => {
-    if (!isInitialized) {
-      initializeApp();
-    }
-  }, [isInitialized, initializeApp]);
+    const interval = setInterval(() => {
+      setPendingCount(persistenceService.getPendingOperationsCount());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Early return with loading state if not initialized
   if (!isInitialized) {
@@ -80,15 +81,6 @@ const ShiftDashboard: React.FC = () => {
   const currentDate = selectedDate || format(new Date(), 'yyyy-MM-dd');
   const taskSummary = getTaskSummaryForDate(currentDate);
   const isFutureDate = isAfter(startOfDay(new Date(currentDate)), startOfDay(new Date()));
-  
-  // Update pending count
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPendingCount(persistenceService.getPendingOperationsCount());
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
   
   // Get filtered tasks based on view mode
   const filteredTasks = getFilteredTasks();

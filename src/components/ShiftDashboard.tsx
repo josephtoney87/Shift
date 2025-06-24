@@ -18,6 +18,7 @@ import SearchBar from './SearchBar';
 import NotesExporter from './NotesExporter';
 import ShiftNotesPanel from './ShiftNotesPanel';
 import UserSelector from './UserSelector';
+import OfflineNotice from './OfflineNotice';
 
 const ShiftDashboard: React.FC = () => {
   const { 
@@ -30,6 +31,7 @@ const ShiftDashboard: React.FC = () => {
     isTaskModalOpen,
     currentUser,
     viewMode,
+    pendingChanges,
     setSelectedDate,
     setSelectedTaskId,
     setTaskModalOpen,
@@ -192,6 +194,9 @@ const ShiftDashboard: React.FC = () => {
       <div className="flex-none">
         <ShiftHeader onDateChange={handleDateChange} />
         <StatsBar stats={statsData} />
+        
+        {/* Offline Notice */}
+        <OfflineNotice pendingChanges={pendingChanges.length} />
         
         <div className="bg-white border-b border-neutral-200 px-4 py-2">
           <div className="flex items-center justify-between">
@@ -358,7 +363,7 @@ const ShiftDashboard: React.FC = () => {
                 </h3>
                 <p className="text-neutral-500 max-w-md">
                   {isFutureDate
-                    ? `Schedule tasks for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Task" buttons above to get started.`
+                    ? `Schedule tasks for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Task" buttons above to get started. All data syncs across devices.`
                     : viewMode === ViewMode.MY_VIEW
                     ? `You have no tasks scheduled for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Task" buttons above to create a task, or switch to "All Data" view to see tasks from other users.`
                     : `There are no tasks scheduled for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Task" buttons above to schedule a task for this date.`

@@ -6,6 +6,11 @@ import {
   TaskStatus, TaskPriority, WorkerRole, ShiftType, ViewMode
 } from '../types';
 import { mockShifts, mockWorkers, mockParts, mockTasks, mockTaskNotes, mockTaskTimeLogs, mockShiftReports } from '../data/mockData';
+import {
+  saveShift, saveWorker, savePart, saveTask, saveTaskNote, saveTimeLog,
+  deleteShift as dbDeleteShift, deleteWorker as dbDeleteWorker, deleteTask as dbDeleteTask,
+  saveStartChecklist, saveEndCleanup, syncAllData, loadAllCloudData
+} from '../services/supabaseOperations';
 
 interface ChecklistAcknowledgment {
   shiftId: string;
@@ -35,12 +40,22 @@ interface ShopState {
   startChecklistStatus: Record<string, ChecklistAcknowledgment>;
   endCleanupStatus: Record<string, ChecklistAcknowledgment>;
   
+  // Sync state
+  isOnline: boolean;
+  lastSyncTime: string | null;
+  pendingChanges: string[];
+  
   // Actions
   setSelectedTaskId: (id: string | null) => void;
   setTaskModalOpen: (isOpen: boolean) => void;
   setSelectedDate: (date: string) => void;
   setCurrentUser: (user: User) => void;
   setViewMode: (mode: ViewMode) => void;
+  
+  // Sync actions
+  syncData: () => Promise<void>;
+  loadCloudData: () => Promise<void>;
+  markPendingChange: (changeId: string) => void;
   
   // User actions
   addUser: (userData: Omit<User, 'id' | 'createdAt'>) => void;
@@ -117,6 +132,11 @@ const defaultUser: User = {
   createdAt: new Date().toISOString()
 };
 
+// Network status detection
+const isOnline = () => {
+  return navigator.onLine;
+};
+
 export const useShopStore = create(
   persist<ShopState>(
     (set, get) => ({
@@ -135,12 +155,69 @@ export const useShopStore = create(
       viewMode: ViewMode.MY_VIEW,
       startChecklistStatus: {},
       endCleanupStatus: {},
+      isOnline: isOnline(),
+      lastSyncTime: null,
+      pendingChanges: [],
       
       setSelectedTaskId: (id) => set({ selectedTaskId: id }),
       setTaskModalOpen: (isOpen) => set({ isTaskModalOpen: isOpen }),
       setSelectedDate: (date) => set({ selectedDate: date }),
       setCurrentUser: (user) => set({ currentUser: user }),
       setViewMode: (mode) => set({ viewMode: mode }),
+      
+      markPendingChange: (changeId) => {
+        set((state) => ({
+          pendingChanges: [...new Set([...state.pendingChanges, changeId])]
+        }));
+      },
+      
+      syncData: async () => {
+        const state = get();
+        if (!isOnline()) {
+          console.log('Offline - sync deferred');
+          return;
+        }
+        
+        try {
+          await syncAllData({
+            shifts: state.shifts,
+            workers: state.workers,
+            parts: state.parts,
+            tasks: state.tasks,
+            taskNotes: state.taskNotes,
+            taskTimeLogs: state.taskTimeLogs
+          });
+          
+          set({
+            lastSyncTime: new Date().toISOString(),
+            pendingChanges: []
+          });
+          
+          console.log('Data synced successfully');
+        } catch (error) {
+          console.error('Sync failed:', error);
+        }
+      },
+      
+      loadCloudData: async () => {
+        if (!isOnline()) {
+          console.log('Offline - using local data');
+          return;
+        }
+        
+        try {
+          const cloudData = await loadAllCloudData();
+          if (cloudData) {
+            set({
+              ...cloudData,
+              lastSyncTime: new Date().toISOString()
+            });
+            console.log('Cloud data loaded successfully');
+          }
+        } catch (error) {
+          console.error('Failed to load cloud data:', error);
+        }
+      },
       
       addUser: (userData) => {
         const newUser: User = {
@@ -152,6 +229,8 @@ export const useShopStore = create(
         set((state) => ({
           users: [...state.users, newUser]
         }));
+        
+        get().markPendingChange(`user-${newUser.id}`);
       },
       
       deleteUser: (userId) => {
@@ -159,10 +238,8 @@ export const useShopStore = create(
           const userToDelete = state.users.find(u => u.id === userId);
           if (!userToDelete) return state;
           
-          // Filter out tasks created by this user
           const updatedTasks = state.tasks.filter(task => task.createdBy !== userId);
           
-          // Update current user if the deleted user was selected
           let newCurrentUser = state.currentUser;
           if (state.currentUser?.id === userId) {
             newCurrentUser = state.users.find(u => u.id !== userId) || state.users[0];
@@ -175,6 +252,8 @@ export const useShopStore = create(
             currentUser: newCurrentUser
           };
         });
+        
+        get().markPendingChange(`user-delete-${userId}`);
       },
       
       addShift: (shift) => {
@@ -185,6 +264,12 @@ export const useShopStore = create(
         set((state) => ({
           shifts: [...state.shifts, newShift]
         }));
+        
+        // Sync to cloud
+        saveShift(newShift).catch(error => {
+          console.error('Failed to save shift:', error);
+          get().markPendingChange(`shift-${newShift.id}`);
+        });
       },
       
       updateShift: (id, updates) => {
@@ -193,18 +278,30 @@ export const useShopStore = create(
             shift.id === id ? { ...shift, ...updates } : shift
           )
         }));
+        
+        const updatedShift = get().shifts.find(s => s.id === id);
+        if (updatedShift) {
+          saveShift(updatedShift).catch(error => {
+            console.error('Failed to update shift:', error);
+            get().markPendingChange(`shift-${id}`);
+          });
+        }
       },
       
       deleteShift: (id) => {
         set((state) => ({
           shifts: state.shifts.filter((shift) => shift.id !== id)
         }));
+        
+        dbDeleteShift(id).catch(error => {
+          console.error('Failed to delete shift:', error);
+          get().markPendingChange(`shift-delete-${id}`);
+        });
       },
       
       addTask: (taskData) => {
         const state = get();
         
-        // Check for duplicate work order
         const existingTask = state.tasks.find(
           task => task.workOrderNumber.toLowerCase() === taskData.workOrderNumber.toLowerCase()
         );
@@ -213,7 +310,6 @@ export const useShopStore = create(
           throw new Error(`Work order ${taskData.workOrderNumber} already exists`);
         }
         
-        // Create a simple part entry for the work order
         const newPart: Part = {
           id: `part-${Date.now()}`,
           partNumber: taskData.workOrderNumber,
@@ -225,6 +321,12 @@ export const useShopStore = create(
         set(state => ({
           parts: [...state.parts, newPart]
         }));
+        
+        // Sync part to cloud
+        savePart(newPart).catch(error => {
+          console.error('Failed to save part:', error);
+          get().markPendingChange(`part-${newPart.id}`);
+        });
 
         const newTask: Task = {
           id: `task-${Date.now()}`,
@@ -244,6 +346,12 @@ export const useShopStore = create(
         set(state => ({
           tasks: [...state.tasks, newTask]
         }));
+        
+        // Sync task to cloud
+        saveTask(newTask).catch(error => {
+          console.error('Failed to save task:', error);
+          get().markPendingChange(`task-${newTask.id}`);
+        });
 
         return newTask;
       },
@@ -256,12 +364,25 @@ export const useShopStore = create(
               : task
           )
         }));
+        
+        const updatedTask = get().tasks.find(t => t.id === taskId);
+        if (updatedTask) {
+          saveTask(updatedTask).catch(error => {
+            console.error('Failed to update task:', error);
+            get().markPendingChange(`task-${taskId}`);
+          });
+        }
       },
       
       deleteTask: (taskId) => {
         set((state) => ({
           tasks: state.tasks.filter((task) => task.id !== taskId)
         }));
+        
+        dbDeleteTask(taskId).catch(error => {
+          console.error('Failed to delete task:', error);
+          get().markPendingChange(`task-delete-${taskId}`);
+        });
       },
       
       moveTaskToShift: (taskId, newShiftId) => {
@@ -272,6 +393,14 @@ export const useShopStore = create(
               : task
           )
         }));
+        
+        const updatedTask = get().tasks.find(t => t.id === taskId);
+        if (updatedTask) {
+          saveTask(updatedTask).catch(error => {
+            console.error('Failed to move task:', error);
+            get().markPendingChange(`task-${taskId}`);
+          });
+        }
       },
       
       carryOverTask: (taskId, newShiftId) => {
@@ -287,6 +416,14 @@ export const useShopStore = create(
               : task
           )
         }));
+        
+        const updatedTask = get().tasks.find(t => t.id === taskId);
+        if (updatedTask) {
+          saveTask(updatedTask).catch(error => {
+            console.error('Failed to carry over task:', error);
+            get().markPendingChange(`task-${taskId}`);
+          });
+        }
       },
       
       addManualWorker: (name, shiftId) => {
@@ -303,6 +440,11 @@ export const useShopStore = create(
           workers: [...state.workers, newWorker]
         }));
         
+        saveWorker(newWorker).catch(error => {
+          console.error('Failed to save worker:', error);
+          get().markPendingChange(`worker-${workerId}`);
+        });
+        
         return workerId;
       },
       
@@ -318,6 +460,14 @@ export const useShopStore = create(
               : task
           )
         }));
+        
+        const updatedTask = get().tasks.find(t => t.id === taskId);
+        if (updatedTask) {
+          saveTask(updatedTask).catch(error => {
+            console.error('Failed to assign worker:', error);
+            get().markPendingChange(`task-${taskId}`);
+          });
+        }
       },
       
       removeWorkerFromTask: (taskId, workerId) => {
@@ -332,6 +482,14 @@ export const useShopStore = create(
               : task
           )
         }));
+        
+        const updatedTask = get().tasks.find(t => t.id === taskId);
+        if (updatedTask) {
+          saveTask(updatedTask).catch(error => {
+            console.error('Failed to remove worker:', error);
+            get().markPendingChange(`task-${taskId}`);
+          });
+        }
       },
 
       deleteWorker: (workerId) => {
@@ -342,6 +500,11 @@ export const useShopStore = create(
             assignedWorkers: task.assignedWorkers.filter((id) => id !== workerId)
           }))
         }));
+        
+        dbDeleteWorker(workerId).catch(error => {
+          console.error('Failed to delete worker:', error);
+          get().markPendingChange(`worker-delete-${workerId}`);
+        });
       },
       
       startTaskTimer: (taskId, workerId) => {
@@ -356,22 +519,38 @@ export const useShopStore = create(
         set((state) => ({
           taskTimeLogs: [...state.taskTimeLogs, newTimeLog]
         }));
+        
+        saveTimeLog(newTimeLog).catch(error => {
+          console.error('Failed to save time log:', error);
+          get().markPendingChange(`timelog-${timeLogId}`);
+        });
       },
       
       stopTaskTimer: (taskId) => {
-        set((state) => ({
-          taskTimeLogs: state.taskTimeLogs.map((log) =>
-            log.taskId === taskId && !log.endTime
-              ? {
-                  ...log,
-                  endTime: new Date().toISOString(),
-                  duration: Math.round(
-                    (new Date().getTime() - new Date(log.startTime).getTime()) / 60000
-                  )
-                }
-              : log
-          )
-        }));
+        const updatedTimeLog = get().taskTimeLogs.find(log => 
+          log.taskId === taskId && !log.endTime
+        );
+        
+        if (updatedTimeLog) {
+          const endTime = new Date().toISOString();
+          const duration = Math.round(
+            (new Date(endTime).getTime() - new Date(updatedTimeLog.startTime).getTime()) / 60000
+          );
+          
+          set((state) => ({
+            taskTimeLogs: state.taskTimeLogs.map((log) =>
+              log.id === updatedTimeLog.id
+                ? { ...log, endTime, duration }
+                : log
+            )
+          }));
+          
+          const finalTimeLog = { ...updatedTimeLog, endTime, duration };
+          saveTimeLog(finalTimeLog).catch(error => {
+            console.error('Failed to update time log:', error);
+            get().markPendingChange(`timelog-${updatedTimeLog.id}`);
+          });
+        }
       },
       
       addTaskNote: (note) => {
@@ -384,6 +563,11 @@ export const useShopStore = create(
         set((state) => ({
           taskNotes: [...state.taskNotes, newNote]
         }));
+        
+        saveTaskNote(newNote).catch(error => {
+          console.error('Failed to save note:', error);
+          get().markPendingChange(`note-${newNote.id}`);
+        });
       },
       
       generateHandoverReport: (shiftId, date) => {
@@ -478,6 +662,7 @@ export const useShopStore = create(
               date,
               completedTasksCount: completedTasks.length,
               pendingTasksCount: carriedOverTasks.length,
+              summaryNotes: '',
               handoverReport
             }
           ]
@@ -505,7 +690,6 @@ export const useShopStore = create(
         const state = get();
         let tasks = state.tasks.filter((t) => t.createdAt.startsWith(date));
         
-        // Filter by user if in MY_VIEW mode
         if (state.viewMode === ViewMode.MY_VIEW && state.currentUser) {
           tasks = tasks.filter((t) => t.createdBy === state.currentUser?.id);
         }
@@ -556,7 +740,6 @@ export const useShopStore = create(
         const state = get();
         let tasks = state.tasks;
         
-        // Filter by user if in MY_VIEW mode
         if (state.viewMode === ViewMode.MY_VIEW && state.currentUser) {
           tasks = tasks.filter((t) => t.createdBy === state.currentUser?.id);
         }
@@ -580,6 +763,11 @@ export const useShopStore = create(
             }
           }
         }));
+        
+        saveStartChecklist(data).catch(error => {
+          console.error('Failed to save start checklist:', error);
+          get().markPendingChange(`start-checklist-${key}`);
+        });
       },
       
       createEndOfShiftCleanup: (data) => {
@@ -598,6 +786,11 @@ export const useShopStore = create(
             }
           }
         }));
+        
+        saveEndCleanup(data).catch(error => {
+          console.error('Failed to save end cleanup:', error);
+          get().markPendingChange(`end-cleanup-${key}`);
+        });
       },
 
       acknowledgeStartChecklist: (shiftId, date, workerId) => {
@@ -647,11 +840,9 @@ export const useShopStore = create(
         const checklist = get().startChecklistStatus[key];
         if (!checklist) return false;
         
-        // Get workers assigned to this shift
         const shiftWorkers = get().workers.filter(w => w.shiftId === shiftId);
         if (shiftWorkers.length === 0) return !!checklist.completedAt;
         
-        // Check if all workers have acknowledged
         return shiftWorkers.every(worker => 
           checklist.acknowledgedWorkers.includes(worker.id)
         );
@@ -662,11 +853,9 @@ export const useShopStore = create(
         const cleanup = get().endCleanupStatus[key];
         if (!cleanup) return false;
         
-        // Get workers assigned to this shift
         const shiftWorkers = get().workers.filter(w => w.shiftId === shiftId);
         if (shiftWorkers.length === 0) return !!cleanup.completedAt;
         
-        // Check if all workers have acknowledged
         return shiftWorkers.every(worker => 
           cleanup.acknowledgedWorkers.includes(worker.id)
         );
@@ -689,7 +878,6 @@ export const useShopStore = create(
           task.createdAt.startsWith(date)
         );
         
-        // Filter by user if in MY_VIEW mode
         if (state.viewMode === ViewMode.MY_VIEW && state.currentUser) {
           tasks = tasks.filter((t) => t.createdBy === state.currentUser?.id);
         }
@@ -778,8 +966,46 @@ export const useShopStore = create(
         currentUser: state.currentUser,
         viewMode: state.viewMode,
         startChecklistStatus: state.startChecklistStatus,
-        endCleanupStatus: state.endCleanupStatus
-      })
+        endCleanupStatus: state.endCleanupStatus,
+        lastSyncTime: state.lastSyncTime,
+        pendingChanges: state.pendingChanges
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Load cloud data on app start
+          setTimeout(() => {
+            state.loadCloudData();
+          }, 1000);
+          
+          // Set up periodic sync
+          setInterval(() => {
+            if (state.pendingChanges.length > 0) {
+              state.syncData();
+            }
+          }, 30000); // Sync every 30 seconds if there are pending changes
+          
+          // Listen for online/offline events
+          window.addEventListener('online', () => {
+            state.syncData();
+          });
+          
+          window.addEventListener('beforeunload', () => {
+            if (state.pendingChanges.length > 0) {
+              // Try to sync before page unload
+              navigator.sendBeacon('/api/sync', JSON.stringify({
+                data: {
+                  shifts: state.shifts,
+                  workers: state.workers,
+                  parts: state.parts,
+                  tasks: state.tasks,
+                  taskNotes: state.taskNotes,
+                  taskTimeLogs: state.taskTimeLogs
+                }
+              }));
+            }
+          });
+        }
+      }
     }
   )
 );

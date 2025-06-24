@@ -3,6 +3,7 @@ import { format, isAfter, startOfDay } from 'date-fns';
 import { Calendar, Plus, AlertCircle } from 'lucide-react';
 import { useShopStore } from '../store/useShopStore';
 import { ShiftType, TaskStatus, TaskPriority } from '../types';
+import SyncStatus from './SyncStatus';
 
 interface ShiftHeaderProps {
   onDateChange: (date: string) => void;
@@ -78,6 +79,9 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
           <h1 className="text-2xl font-bold mb-4 md:mb-0">CNC Shop Shift Management</h1>
           
           <div className="flex items-center space-x-4">
+            {/* Sync Status */}
+            <SyncStatus />
+            
             <div className="relative flex items-center group">
               <Calendar className="absolute left-3 text-primary-200" size={18} />
               <input
@@ -91,7 +95,7 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
                 } focus:outline-none focus:ring-2 focus:ring-primary-500`}
               />
               <div className="absolute hidden group-hover:block bottom-full left-0 mb-2 w-64 p-2 bg-neutral-800 text-sm text-white rounded shadow-lg">
-                Click on any date to view or manage tasks
+                Click on any date to view or manage tasks. Data syncs across all devices.
               </div>
             </div>
             

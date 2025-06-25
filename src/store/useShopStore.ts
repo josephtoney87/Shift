@@ -49,6 +49,7 @@ interface ShopState {
   lastSyncTime: string | null;
   pendingChanges: string[];
   isInitialized: boolean;
+  autoSyncEnabled: boolean;
   
   // Actions
   setSelectedTaskId: (id: string | null) => void;
@@ -61,6 +62,7 @@ interface ShopState {
   initializeApp: () => Promise<void>;
   syncData: () => Promise<void>;
   loadCloudData: () => Promise<void>;
+  forceSyncAllData: () => Promise<boolean>;
   markPendingChange: (changeId: string) => void;
   
   // User actions
@@ -165,6 +167,7 @@ export const useShopStore = create(
       lastSyncTime: null,
       pendingChanges: [],
       isInitialized: false,
+      autoSyncEnabled: true,
       
       setSelectedTaskId: (id) => set({ selectedTaskId: id }),
       setTaskModalOpen: (isOpen) => set({ isTaskModalOpen: isOpen }),
@@ -182,19 +185,26 @@ export const useShopStore = create(
         const state = get();
         if (state.isInitialized) return;
 
-        console.log('Initializing application...');
+        console.log('🚀 Initializing CNC Shop Management application...');
         
         try {
-          // Initialize real-time subscriptions
-          await realtimeService.initialize();
+          // Initialize real-time subscriptions if credentials are available
+          if (hasValidCredentials()) {
+            await realtimeService.initialize();
+            console.log('📡 Real-time subscriptions initialized');
+          }
           
-          // Load initial data
+          // Load initial data (will load from cloud if available, local otherwise)
           await state.loadCloudData();
           
-          set({ isInitialized: true });
-          console.log('Application initialized successfully');
+          set({ 
+            isInitialized: true,
+            lastSyncTime: new Date().toISOString()
+          });
+          
+          console.log('✅ Application initialized successfully');
         } catch (error) {
-          console.error('Failed to initialize application:', error);
+          console.error('❌ Failed to initialize application:', error);
           set({ isInitialized: true }); // Mark as initialized even if failed
         }
       },
@@ -202,12 +212,14 @@ export const useShopStore = create(
       syncData: async () => {
         const state = get();
         if (!hasValidCredentials() || !isOnline()) {
-          console.log('Cannot sync - no connection or credentials');
+          console.log('❌ Cannot sync - no connection or credentials');
           return;
         }
         
         try {
-          console.log('Starting data sync...');
+          console.log('🔄 Starting comprehensive data sync...');
+          
+          // First sync all current state to cloud
           await syncAllData({
             shifts: state.shifts,
             workers: state.workers,
@@ -217,39 +229,61 @@ export const useShopStore = create(
             taskTimeLogs: state.taskTimeLogs
           });
           
+          // Then sync pending operations
+          await persistenceService.syncPendingOperations();
+          
           set({
             lastSyncTime: new Date().toISOString(),
             pendingChanges: []
           });
           
-          console.log('Data synced successfully');
+          console.log('✅ Data synced successfully');
         } catch (error) {
-          console.error('Sync failed:', error);
+          console.error('❌ Sync failed:', error);
           throw error;
         }
       },
       
       loadCloudData: async () => {
-        if (!hasValidCredentials()) {
-          console.log('No Supabase credentials - using local data only');
-          return;
-        }
-        
         try {
-          console.log('Loading data from cloud...');
-          const cloudData = await loadAllCloudData();
-          if (cloudData) {
+          console.log('📥 Loading data...');
+          const data = await persistenceService.loadAllData();
+          
+          if (data) {
             set({
-              ...cloudData,
+              ...data,
               lastSyncTime: new Date().toISOString(),
               pendingChanges: []
             });
-            console.log('Cloud data loaded successfully');
+            console.log('✅ Data loaded successfully');
           }
         } catch (error) {
-          console.error('Failed to load cloud data:', error);
-          // Continue with local data
+          console.error('❌ Failed to load data:', error);
+          // Continue with existing state
         }
+      },
+
+      forceSyncAllData: async () => {
+        const state = get();
+        console.log('💫 Force syncing all data to cloud...');
+        
+        const success = await persistenceService.forceSyncAll({
+          shifts: state.shifts,
+          workers: state.workers,
+          parts: state.parts,
+          tasks: state.tasks,
+          taskNotes: state.taskNotes,
+          taskTimeLogs: state.taskTimeLogs
+        });
+
+        if (success) {
+          set({
+            lastSyncTime: new Date().toISOString(),
+            pendingChanges: []
+          });
+        }
+
+        return success;
       },
       
       addUser: (userData) => {
@@ -298,7 +332,7 @@ export const useShopStore = create(
           shifts: [...state.shifts, newShift]
         }));
         
-        // Persist to cloud/local
+        // Automatically save to cloud/local with improved persistence
         persistenceService.saveData('shifts', newShift, 'create');
       },
       
@@ -349,7 +383,7 @@ export const useShopStore = create(
           parts: [...state.parts, newPart]
         }));
         
-        // Persist part
+        // Auto-save part to cloud/local
         persistenceService.saveData('parts', newPart, 'create');
 
         const newTask: Task = {
@@ -371,7 +405,7 @@ export const useShopStore = create(
           tasks: [...state.tasks, newTask]
         }));
         
-        // Persist task
+        // Auto-save task to cloud/local
         persistenceService.saveData('tasks', newTask, 'create');
 
         return newTask;
@@ -962,7 +996,8 @@ export const useShopStore = create(
         startChecklistStatus: state.startChecklistStatus,
         endCleanupStatus: state.endCleanupStatus,
         lastSyncTime: state.lastSyncTime,
-        pendingChanges: state.pendingChanges
+        pendingChanges: state.pendingChanges,
+        autoSyncEnabled: state.autoSyncEnabled
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

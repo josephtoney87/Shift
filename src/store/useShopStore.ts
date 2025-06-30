@@ -398,7 +398,7 @@ export const useShopStore = create(
       },
       
       deleteShift: (id) => {
-        console.log(`🗑️ Deleting shift with ID: ${id}`);
+        console.log(`🗑️ Starting shift deletion process for ID: ${id}`);
         
         const state = get();
         const shiftToDelete = state.shifts.find(s => s.id === id);
@@ -416,7 +416,7 @@ export const useShopStore = create(
         
         console.log(`📊 Related data: ${workersToRemove.length} workers, ${tasksToRemove.length} tasks`);
         
-        // Remove shift from local state immediately
+        // Remove shift and all related data from local state immediately
         set((state) => ({
           shifts: state.shifts.filter((shift) => shift.id !== id),
           // Also remove related workers and tasks

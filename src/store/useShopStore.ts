@@ -134,53 +134,53 @@ interface ShopState {
 }
 
 // Default user - use Daniel Lerner as default since he's on 2nd shift
-const defaultUser: User = mockUsers.find(u => u.name === 'Daniel Lerner') || mockUsers[0];
+const defaultUser: User = (mockUsers.find(u => (u.name as string) === 'Daniel Lerner') || mockUsers[0]) as User;
 
 // Network status detection
-const isOnline = () => {
-  return navigator.onLine;
+const isOnline = (): boolean => {
+  return navigator.onLine as boolean;
 };
 
 export const useShopStore = create(
   persist<ShopState>(
     (set, get) => ({
-      shifts: mockShifts,
-      workers: mockWorkers,
-      parts: mockParts,
-      tasks: mockTasks,
-      taskNotes: mockTaskNotes,
-      taskTimeLogs: mockTaskTimeLogs,
-      shiftReports: mockShiftReports,
-      users: mockUsers,
-      selectedTaskId: null,
-      isTaskModalOpen: false,
-      selectedDate: format(new Date(), 'yyyy-MM-dd'),
-      currentUser: defaultUser,
-      viewMode: ViewMode.MY_VIEW,
-      startChecklistStatus: {},
-      endCleanupStatus: {},
-      isOnline: isOnline(),
-      lastSyncTime: null,
-      pendingChanges: [],
-      isInitialized: false,
-      autoSyncEnabled: true,
-      realtimeConnected: false,
+      shifts: mockShifts as Shift[],
+      workers: mockWorkers as Worker[],
+      parts: mockParts as Part[],
+      tasks: mockTasks as Task[],
+      taskNotes: mockTaskNotes as TaskNote[],
+      taskTimeLogs: mockTaskTimeLogs as TaskTimeLog[],
+      shiftReports: mockShiftReports as ShiftReport[],
+      users: mockUsers as User[],
+      selectedTaskId: null as string | null,
+      isTaskModalOpen: false as boolean,
+      selectedDate: format(new Date(), 'yyyy-MM-dd') as string,
+      currentUser: defaultUser as User,
+      viewMode: ViewMode.MY_VIEW as ViewMode,
+      startChecklistStatus: {} as Record<string, ChecklistAcknowledgment>,
+      endCleanupStatus: {} as Record<string, ChecklistAcknowledgment>,
+      isOnline: isOnline() as boolean,
+      lastSyncTime: null as string | null,
+      pendingChanges: [] as string[],
+      isInitialized: false as boolean,
+      autoSyncEnabled: true as boolean,
+      realtimeConnected: false as boolean,
       
-      setSelectedTaskId: (id) => set({ selectedTaskId: id }),
-      setTaskModalOpen: (isOpen) => set({ isTaskModalOpen: isOpen }),
-      setSelectedDate: (date) => set({ selectedDate: date }),
-      setCurrentUser: (user) => set({ currentUser: user }),
-      setViewMode: (mode) => set({ viewMode: mode }),
+      setSelectedTaskId: (id: string | null) => set({ selectedTaskId: id as string | null }),
+      setTaskModalOpen: (isOpen: boolean) => set({ isTaskModalOpen: isOpen as boolean }),
+      setSelectedDate: (date: string) => set({ selectedDate: date as string }),
+      setCurrentUser: (user: User) => set({ currentUser: user as User }),
+      setViewMode: (mode: ViewMode) => set({ viewMode: mode as ViewMode }),
       
-      markPendingChange: (changeId) => {
+      markPendingChange: (changeId: string) => {
         set((state) => ({
-          pendingChanges: [...new Set([...state.pendingChanges, changeId])]
+          pendingChanges: [...new Set([...state.pendingChanges, changeId as string])] as string[]
         }));
       },
 
       initializeApp: async () => {
         const state = get();
-        if (state.isInitialized) return;
+        if (state.isInitialized as boolean) return;
 
         console.log('🚀 Initializing CNC Shop Management application...');
         
@@ -188,7 +188,7 @@ export const useShopStore = create(
           // Initialize real-time subscriptions if credentials are available
           if (hasValidCredentials()) {
             await realtimeService.initialize();
-            set({ realtimeConnected: true });
+            set({ realtimeConnected: true as boolean });
             console.log('📡 Real-time subscriptions initialized');
           }
           
@@ -196,8 +196,8 @@ export const useShopStore = create(
           await state.loadCloudData();
           
           set({ 
-            isInitialized: true,
-            lastSyncTime: new Date().toISOString()
+            isInitialized: true as boolean,
+            lastSyncTime: new Date().toISOString() as string
           });
           
           console.log('✅ Application initialized successfully');
@@ -205,7 +205,7 @@ export const useShopStore = create(
           // Setup real-time event listeners
           window.addEventListener('realtimeUpdate', ((event: CustomEvent) => {
             const { table, operation, newData, oldData } = event.detail;
-            console.log(`📡 Real-time update received: ${operation} on ${table}`);
+            console.log(`📡 Real-time update received: ${operation as string} on ${table as string}`);
             
             // The realtimeService already handles updating the store directly
             // This event can be used for additional UI updates or notifications
@@ -213,7 +213,7 @@ export const useShopStore = create(
 
         } catch (error) {
           console.error('❌ Failed to initialize application:', error);
-          set({ isInitialized: true }); // Mark as initialized even if failed
+          set({ isInitialized: true as boolean }); // Mark as initialized even if failed
         }
       },
       
@@ -229,20 +229,20 @@ export const useShopStore = create(
           
           // First sync all current state to cloud
           await syncAllData({
-            shifts: state.shifts,
-            workers: state.workers,
-            parts: state.parts,
-            tasks: state.tasks,
-            taskNotes: state.taskNotes,
-            taskTimeLogs: state.taskTimeLogs
+            shifts: state.shifts as Shift[],
+            workers: state.workers as Worker[],
+            parts: state.parts as Part[],
+            tasks: state.tasks as Task[],
+            taskNotes: state.taskNotes as TaskNote[],
+            taskTimeLogs: state.taskTimeLogs as TaskTimeLog[]
           });
           
           // Then sync pending operations
           await persistenceService.syncPendingOperations();
           
           set({
-            lastSyncTime: new Date().toISOString(),
-            pendingChanges: []
+            lastSyncTime: new Date().toISOString() as string,
+            pendingChanges: [] as string[]
           });
           
           console.log('✅ Data synced successfully');
@@ -261,16 +261,16 @@ export const useShopStore = create(
             // Merge with default data to ensure we have the predefined workers
             const mergedData = {
               ...data,
-              users: data.users && data.users.length > 0 ? data.users : mockUsers,
-              workers: data.workers && data.workers.length > 0 ? data.workers : mockWorkers,
-              shifts: data.shifts && data.shifts.length > 0 ? data.shifts : mockShifts,
-              parts: data.parts && data.parts.length > 0 ? data.parts : mockParts
+              users: ((data.users && (data.users as User[]).length > 0) ? data.users : mockUsers) as User[],
+              workers: ((data.workers && (data.workers as Worker[]).length > 0) ? data.workers : mockWorkers) as Worker[],
+              shifts: ((data.shifts && (data.shifts as Shift[]).length > 0) ? data.shifts : mockShifts) as Shift[],
+              parts: ((data.parts && (data.parts as Part[]).length > 0) ? data.parts : mockParts) as Part[]
             };
             
             set({
               ...mergedData,
-              lastSyncTime: new Date().toISOString(),
-              pendingChanges: []
+              lastSyncTime: new Date().toISOString() as string,
+              pendingChanges: [] as string[]
             });
             console.log('✅ Data loaded successfully');
           }
@@ -294,15 +294,15 @@ export const useShopStore = create(
             // Merge with defaults to preserve predefined workers
             const mergedData = {
               ...cloudData,
-              users: cloudData.users && cloudData.users.length > 0 ? cloudData.users : mockUsers,
-              workers: cloudData.workers && cloudData.workers.length > 0 ? cloudData.workers : mockWorkers,
-              shifts: cloudData.shifts && cloudData.shifts.length > 0 ? cloudData.shifts : mockShifts,
-              parts: cloudData.parts && cloudData.parts.length > 0 ? cloudData.parts : mockParts
+              users: ((cloudData.users && (cloudData.users as User[]).length > 0) ? cloudData.users : mockUsers) as User[],
+              workers: ((cloudData.workers && (cloudData.workers as Worker[]).length > 0) ? cloudData.workers : mockWorkers) as Worker[],
+              shifts: ((cloudData.shifts && (cloudData.shifts as Shift[]).length > 0) ? cloudData.shifts : mockShifts) as Shift[],
+              parts: ((cloudData.parts && (cloudData.parts as Part[]).length > 0) ? cloudData.parts : mockParts) as Part[]
             };
             
             set({
               ...mergedData,
-              lastSyncTime: new Date().toISOString()
+              lastSyncTime: new Date().toISOString() as string
             });
             console.log('✅ Data refreshed from cloud');
           }
@@ -311,658 +311,658 @@ export const useShopStore = create(
         }
       },
 
-      forceSyncAllData: async () => {
+      forceSyncAllData: async (): Promise<boolean> => {
         const state = get();
         console.log('💫 Force syncing all data to cloud...');
         
         const success = await persistenceService.forceSyncAll({
-          shifts: state.shifts,
-          workers: state.workers,
-          parts: state.parts,
-          tasks: state.tasks,
-          taskNotes: state.taskNotes,
-          taskTimeLogs: state.taskTimeLogs
-        });
+          shifts: state.shifts as Shift[],
+          workers: state.workers as Worker[],
+          parts: state.parts as Part[],
+          tasks: state.tasks as Task[],
+          taskNotes: state.taskNotes as TaskNote[],
+          taskTimeLogs: state.taskTimeLogs as TaskTimeLog[]
+        }) as boolean;
 
-        if (success) {
+        if (success as boolean) {
           set({
-            lastSyncTime: new Date().toISOString(),
-            pendingChanges: []
+            lastSyncTime: new Date().toISOString() as string,
+            pendingChanges: [] as string[]
           });
         }
 
-        return success;
+        return success as boolean;
       },
       
-      addUser: (userData) => {
+      addUser: (userData: Omit<User, 'id' | 'createdAt'>) => {
         const newUser: User = {
-          id: uuidv4(),
+          id: uuidv4() as string,
           ...userData,
-          createdAt: new Date().toISOString()
-        };
+          createdAt: new Date().toISOString() as string
+        } as User;
         
         set((state) => ({
-          users: [...state.users, newUser]
+          users: [...state.users, newUser as User] as User[]
         }));
         
-        get().markPendingChange(`user-${newUser.id}`);
+        get().markPendingChange(`user-${newUser.id as string}` as string);
       },
       
-      deleteUser: (userId) => {
+      deleteUser: (userId: string) => {
         set((state) => {
-          const userToDelete = state.users.find(u => u.id === userId);
+          const userToDelete = state.users.find(u => (u.id as string) === (userId as string)) as User | undefined;
           if (!userToDelete) return state;
           
-          const updatedTasks = state.tasks.filter(task => task.createdBy !== userId);
+          const updatedTasks = state.tasks.filter(task => (task.createdBy as string) !== (userId as string)) as Task[];
           
-          let newCurrentUser = state.currentUser;
-          if (state.currentUser?.id === userId) {
-            newCurrentUser = state.users.find(u => u.id !== userId) || state.users[0];
+          let newCurrentUser = state.currentUser as User | null;
+          if ((state.currentUser?.id as string) === (userId as string)) {
+            newCurrentUser = (state.users.find(u => (u.id as string) !== (userId as string)) || state.users[0]) as User;
           }
           
           return {
             ...state,
-            users: state.users.filter(u => u.id !== userId),
-            tasks: updatedTasks,
-            currentUser: newCurrentUser
+            users: state.users.filter(u => (u.id as string) !== (userId as string)) as User[],
+            tasks: updatedTasks as Task[],
+            currentUser: newCurrentUser as User | null
           };
         });
         
-        get().markPendingChange(`user-delete-${userId}`);
+        get().markPendingChange(`user-delete-${userId as string}` as string);
       },
       
-      addShift: (shift) => {
+      addShift: (shift: Omit<Shift, 'id'>) => {
         const newShift: Shift = {
-          id: uuidv4(),
+          id: uuidv4() as string,
           ...shift
-        };
+        } as Shift;
         set((state) => ({
-          shifts: [...state.shifts, newShift]
+          shifts: [...state.shifts, newShift as Shift] as Shift[]
         }));
         
         // Automatically save to cloud/local with improved persistence
-        persistenceService.saveData('shifts', newShift, 'create');
+        persistenceService.saveData('shifts', newShift as Shift, 'create');
       },
       
-      updateShift: (id, updates) => {
+      updateShift: (id: string, updates: Partial<Shift>) => {
         set((state) => ({
           shifts: state.shifts.map((shift) =>
-            shift.id === id ? { ...shift, ...updates } : shift
-          )
+            (shift.id as string) === (id as string) ? { ...shift, ...updates } as Shift : shift
+          ) as Shift[]
         }));
         
-        const updatedShift = get().shifts.find(s => s.id === id);
+        const updatedShift = get().shifts.find(s => (s.id as string) === (id as string)) as Shift | undefined;
         if (updatedShift) {
-          persistenceService.saveData('shifts', updatedShift, 'update');
+          persistenceService.saveData('shifts', updatedShift as Shift, 'update');
         }
       },
       
-      deleteShift: (id) => {
-        const shiftToDelete = get().shifts.find(s => s.id === id);
+      deleteShift: (id: string) => {
+        const shiftToDelete = get().shifts.find(s => (s.id as string) === (id as string)) as Shift | undefined;
         set((state) => ({
-          shifts: state.shifts.filter((shift) => shift.id !== id)
+          shifts: state.shifts.filter((shift) => (shift.id as string) !== (id as string)) as Shift[]
         }));
         
         if (shiftToDelete) {
-          persistenceService.saveData('shifts', { ...shiftToDelete, deleted_at: new Date().toISOString() }, 'delete');
+          persistenceService.saveData('shifts', { ...shiftToDelete, deleted_at: new Date().toISOString() as string } as any, 'delete');
         }
       },
       
-      addTask: (taskData) => {
+      addTask: (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
         const state = get();
         
         const existingTask = state.tasks.find(
-          task => task.workOrderNumber.toLowerCase() === taskData.workOrderNumber.toLowerCase()
-        );
+          task => (task.workOrderNumber as string).toLowerCase() === (taskData.workOrderNumber as string).toLowerCase()
+        ) as Task | undefined;
         
         if (existingTask) {
-          throw new Error(`Work order ${taskData.workOrderNumber} already exists`);
+          throw new Error(`Work order ${taskData.workOrderNumber as string} already exists`);
         }
         
         const newPart: Part = {
-          id: uuidv4(),
-          partNumber: taskData.workOrderNumber,
-          revision: 'N/A',
-          material: 'N/A',
-          coating: undefined
-        };
+          id: uuidv4() as string,
+          partNumber: taskData.workOrderNumber as string,
+          revision: 'N/A' as string,
+          material: 'N/A' as string,
+          coating: undefined as string | undefined
+        } as Part;
         
         set(state => ({
-          parts: [...state.parts, newPart]
+          parts: [...state.parts, newPart as Part] as Part[]
         }));
         
         // Auto-save part to cloud/local
-        persistenceService.saveData('parts', newPart, 'create');
+        persistenceService.saveData('parts', newPart as Part, 'create');
 
         const newTask: Task = {
-          id: uuidv4(),
-          workOrderNumber: taskData.workOrderNumber || `WO-${Date.now()}`,
-          partId: newPart.id,
-          description: taskData.description,
-          estimatedDuration: taskData.estimatedDuration,
-          priority: taskData.priority,
-          assignedWorkers: taskData.assignedWorkers || [],
-          shiftId: taskData.shiftId,
-          status: TaskStatus.PENDING,
-          createdAt: taskData.createdAt || new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          createdBy: state.currentUser?.id || 'unknown'
-        };
+          id: uuidv4() as string,
+          workOrderNumber: (taskData.workOrderNumber || `WO-${Date.now() as number}`) as string,
+          partId: newPart.id as string,
+          description: taskData.description as string,
+          estimatedDuration: taskData.estimatedDuration as number,
+          priority: taskData.priority as TaskPriority,
+          assignedWorkers: (taskData.assignedWorkers || []) as string[],
+          shiftId: taskData.shiftId as string,
+          status: TaskStatus.PENDING as TaskStatus,
+          createdAt: (taskData.createdAt || new Date().toISOString()) as string,
+          updatedAt: new Date().toISOString() as string,
+          createdBy: (state.currentUser?.id || 'unknown') as string
+        } as Task;
 
         set(state => ({
-          tasks: [...state.tasks, newTask]
+          tasks: [...state.tasks, newTask as Task] as Task[]
         }));
         
         // Auto-save task to cloud/local
-        persistenceService.saveData('tasks', newTask, 'create');
+        persistenceService.saveData('tasks', newTask as Task, 'create');
 
-        return newTask;
+        return newTask as Task;
       },
       
-      updateTaskStatus: (taskId, status) => {
+      updateTaskStatus: (taskId: string, status: TaskStatus) => {
         set((state) => ({
           tasks: state.tasks.map((task) =>
-            task.id === taskId
-              ? { ...task, status, updatedAt: new Date().toISOString() }
+            (task.id as string) === (taskId as string)
+              ? { ...task, status: status as TaskStatus, updatedAt: new Date().toISOString() as string } as Task
               : task
-          )
+          ) as Task[]
         }));
         
-        const updatedTask = get().tasks.find(t => t.id === taskId);
+        const updatedTask = get().tasks.find(t => (t.id as string) === (taskId as string)) as Task | undefined;
         if (updatedTask) {
-          persistenceService.saveData('tasks', updatedTask, 'update');
+          persistenceService.saveData('tasks', updatedTask as Task, 'update');
         }
       },
       
-      deleteTask: (taskId) => {
-        const taskToDelete = get().tasks.find(t => t.id === taskId);
+      deleteTask: (taskId: string) => {
+        const taskToDelete = get().tasks.find(t => (t.id as string) === (taskId as string)) as Task | undefined;
         set((state) => ({
-          tasks: state.tasks.filter((task) => task.id !== taskId)
+          tasks: state.tasks.filter((task) => (task.id as string) !== (taskId as string)) as Task[]
         }));
         
         if (taskToDelete) {
-          persistenceService.saveData('tasks', { ...taskToDelete, deleted_at: new Date().toISOString() }, 'delete');
+          persistenceService.saveData('tasks', { ...taskToDelete, deleted_at: new Date().toISOString() as string } as any, 'delete');
         }
       },
       
-      moveTaskToShift: (taskId, newShiftId) => {
+      moveTaskToShift: (taskId: string, newShiftId: string) => {
         set((state) => ({
           tasks: state.tasks.map((task) =>
-            task.id === taskId
-              ? { ...task, shiftId: newShiftId, updatedAt: new Date().toISOString() }
+            (task.id as string) === (taskId as string)
+              ? { ...task, shiftId: newShiftId as string, updatedAt: new Date().toISOString() as string } as Task
               : task
-          )
+          ) as Task[]
         }));
         
-        const updatedTask = get().tasks.find(t => t.id === taskId);
+        const updatedTask = get().tasks.find(t => (t.id as string) === (taskId as string)) as Task | undefined;
         if (updatedTask) {
-          persistenceService.saveData('tasks', updatedTask, 'update');
+          persistenceService.saveData('tasks', updatedTask as Task, 'update');
         }
       },
       
-      carryOverTask: (taskId, newShiftId) => {
+      carryOverTask: (taskId: string, newShiftId: string) => {
         set((state) => ({
           tasks: state.tasks.map((task) =>
-            task.id === taskId
+            (task.id as string) === (taskId as string)
               ? {
                   ...task,
-                  shiftId: newShiftId,
-                  status: TaskStatus.PENDING,
-                  updatedAt: new Date().toISOString()
-                }
+                  shiftId: newShiftId as string,
+                  status: TaskStatus.PENDING as TaskStatus,
+                  updatedAt: new Date().toISOString() as string
+                } as Task
               : task
-          )
+          ) as Task[]
         }));
         
-        const updatedTask = get().tasks.find(t => t.id === taskId);
+        const updatedTask = get().tasks.find(t => (t.id as string) === (taskId as string)) as Task | undefined;
         if (updatedTask) {
-          persistenceService.saveData('tasks', updatedTask, 'update');
+          persistenceService.saveData('tasks', updatedTask as Task, 'update');
         }
       },
       
-      addManualWorker: (name, shiftId) => {
-        const workerId = uuidv4();
+      addManualWorker: (name: string, shiftId: string): string => {
+        const workerId = uuidv4() as string;
         const newWorker: Worker = {
-          id: workerId,
-          name,
-          role: WorkerRole.OPERATOR,
-          shiftId,
-          isManual: true
-        };
+          id: workerId as string,
+          name: name as string,
+          role: WorkerRole.OPERATOR as WorkerRole,
+          shiftId: shiftId as string,
+          isManual: true as boolean
+        } as Worker;
         
         set((state) => ({
-          workers: [...state.workers, newWorker]
+          workers: [...state.workers, newWorker as Worker] as Worker[]
         }));
         
-        persistenceService.saveData('workers', newWorker, 'create');
+        persistenceService.saveData('workers', newWorker as Worker, 'create');
         
-        return workerId;
+        return workerId as string;
       },
       
-      assignWorkerToTask: (taskId, workerId) => {
+      assignWorkerToTask: (taskId: string, workerId: string) => {
         set((state) => ({
           tasks: state.tasks.map((task) =>
-            task.id === taskId
+            (task.id as string) === (taskId as string)
               ? {
                   ...task,
-                  assignedWorkers: [...new Set([...task.assignedWorkers, workerId])],
-                  updatedAt: new Date().toISOString()
-                }
+                  assignedWorkers: [...new Set([...task.assignedWorkers, workerId as string])] as string[],
+                  updatedAt: new Date().toISOString() as string
+                } as Task
               : task
-          )
+          ) as Task[]
         }));
         
-        const updatedTask = get().tasks.find(t => t.id === taskId);
+        const updatedTask = get().tasks.find(t => (t.id as string) === (taskId as string)) as Task | undefined;
         if (updatedTask) {
-          persistenceService.saveData('tasks', updatedTask, 'update');
+          persistenceService.saveData('tasks', updatedTask as Task, 'update');
         }
       },
       
-      removeWorkerFromTask: (taskId, workerId) => {
+      removeWorkerFromTask: (taskId: string, workerId: string) => {
         set((state) => ({
           tasks: state.tasks.map((task) =>
-            task.id === taskId
+            (task.id as string) === (taskId as string)
               ? {
                   ...task,
-                  assignedWorkers: task.assignedWorkers.filter((id) => id !== workerId),
-                  updatedAt: new Date().toISOString()
-                }
+                  assignedWorkers: task.assignedWorkers.filter((id) => (id as string) !== (workerId as string)) as string[],
+                  updatedAt: new Date().toISOString() as string
+                } as Task
               : task
-          )
+          ) as Task[]
         }));
         
-        const updatedTask = get().tasks.find(t => t.id === taskId);
+        const updatedTask = get().tasks.find(t => (t.id as string) === (taskId as string)) as Task | undefined;
         if (updatedTask) {
-          persistenceService.saveData('tasks', updatedTask, 'update');
+          persistenceService.saveData('tasks', updatedTask as Task, 'update');
         }
       },
 
-      deleteWorker: (workerId) => {
-        const workerToDelete = get().workers.find(w => w.id === workerId);
+      deleteWorker: (workerId: string) => {
+        const workerToDelete = get().workers.find(w => (w.id as string) === (workerId as string)) as Worker | undefined;
         set((state) => ({
-          workers: state.workers.filter((w) => w.id !== workerId),
+          workers: state.workers.filter((w) => (w.id as string) !== (workerId as string)) as Worker[],
           tasks: state.tasks.map((task) => ({
             ...task,
-            assignedWorkers: task.assignedWorkers.filter((id) => id !== workerId)
-          }))
+            assignedWorkers: task.assignedWorkers.filter((id) => (id as string) !== (workerId as string)) as string[]
+          }) as Task) as Task[]
         }));
         
         if (workerToDelete) {
-          persistenceService.saveData('workers', { ...workerToDelete, deleted_at: new Date().toISOString() }, 'delete');
+          persistenceService.saveData('workers', { ...workerToDelete, deleted_at: new Date().toISOString() as string } as any, 'delete');
         }
       },
       
-      startTaskTimer: (taskId, workerId) => {
-        const timeLogId = uuidv4();
+      startTaskTimer: (taskId: string, workerId: string) => {
+        const timeLogId = uuidv4() as string;
         const newTimeLog: TaskTimeLog = {
-          id: timeLogId,
-          taskId,
-          workerId,
-          startTime: new Date().toISOString()
-        };
+          id: timeLogId as string,
+          taskId: taskId as string,
+          workerId: workerId as string,
+          startTime: new Date().toISOString() as string
+        } as TaskTimeLog;
         
         set((state) => ({
-          taskTimeLogs: [...state.taskTimeLogs, newTimeLog]
+          taskTimeLogs: [...state.taskTimeLogs, newTimeLog as TaskTimeLog] as TaskTimeLog[]
         }));
         
-        persistenceService.saveData('time_logs', newTimeLog, 'create');
+        persistenceService.saveData('time_logs', newTimeLog as TaskTimeLog, 'create');
       },
       
-      stopTaskTimer: (taskId) => {
+      stopTaskTimer: (taskId: string) => {
         const updatedTimeLog = get().taskTimeLogs.find(log => 
-          log.taskId === taskId && !log.endTime
-        );
+          (log.taskId as string) === (taskId as string) && !log.endTime
+        ) as TaskTimeLog | undefined;
         
         if (updatedTimeLog) {
-          const endTime = new Date().toISOString();
+          const endTime = new Date().toISOString() as string;
           const duration = Math.round(
-            (new Date(endTime).getTime() - new Date(updatedTimeLog.startTime).getTime()) / 60000
-          );
+            (new Date(endTime as string).getTime() - new Date(updatedTimeLog.startTime as string).getTime()) / 60000
+          ) as number;
           
           set((state) => ({
             taskTimeLogs: state.taskTimeLogs.map((log) =>
-              log.id === updatedTimeLog.id
-                ? { ...log, endTime, duration }
+              (log.id as string) === (updatedTimeLog.id as string)
+                ? { ...log, endTime: endTime as string, duration: duration as number } as TaskTimeLog
                 : log
-            )
+            ) as TaskTimeLog[]
           }));
           
-          const finalTimeLog = { ...updatedTimeLog, endTime, duration };
-          persistenceService.saveData('time_logs', finalTimeLog, 'update');
+          const finalTimeLog = { ...updatedTimeLog, endTime: endTime as string, duration: duration as number } as TaskTimeLog;
+          persistenceService.saveData('time_logs', finalTimeLog as TaskTimeLog, 'update');
         }
       },
       
-      addTaskNote: (note) => {
+      addTaskNote: (note: Omit<TaskNote, 'id' | 'timestamp'>) => {
         const newNote: TaskNote = {
-          id: uuidv4(),
+          id: uuidv4() as string,
           ...note,
-          timestamp: new Date().toISOString()
-        };
+          timestamp: new Date().toISOString() as string
+        } as TaskNote;
         
         set((state) => ({
-          taskNotes: [...state.taskNotes, newNote]
+          taskNotes: [...state.taskNotes, newNote as TaskNote] as TaskNote[]
         }));
         
-        persistenceService.saveData('task_notes', newNote, 'create');
+        persistenceService.saveData('task_notes', newNote as TaskNote, 'create');
       },
       
-      generateHandoverReport: (shiftId, date) => {
+      generateHandoverReport: (shiftId: string, date: string) => {
         const state = get();
-        const shift = state.shifts.find((s) => s.id === shiftId);
+        const shift = state.shifts.find((s) => (s.id as string) === (shiftId as string)) as Shift | undefined;
         if (!shift) return;
         
         const shiftTasks = state.tasks.filter((t) => 
-          t.shiftId === shiftId && t.createdAt.startsWith(date)
-        );
+          (t.shiftId as string) === (shiftId as string) && (t.createdAt as string).startsWith(date as string)
+        ) as Task[];
         
         const completedTasks = shiftTasks
-          .filter((t) => t.status === TaskStatus.COMPLETED)
+          .filter((t) => (t.status as TaskStatus) === TaskStatus.COMPLETED)
           .map((task) => {
-            const part = state.parts.find((p) => p.id === task.partId);
+            const part = state.parts.find((p) => (p.id as string) === (task.partId as string)) as Part | undefined;
             const completedLog = state.taskTimeLogs
-              .filter((log) => log.taskId === task.id && log.endTime)
+              .filter((log) => (log.taskId as string) === (task.id as string) && log.endTime)
               .sort((a, b) => 
-                new Date(b.endTime!).getTime() - new Date(a.endTime!).getTime()
-              )[0];
+                new Date(b.endTime! as string).getTime() - new Date(a.endTime! as string).getTime()
+              )[0] as TaskTimeLog | undefined;
               
             return {
-              taskId: task.id,
-              workOrderNumber: task.workOrderNumber,
-              partNumber: part?.partNumber || 'Unknown',
-              description: task.description,
-              completedAt: completedLog?.endTime || task.updatedAt,
-              completedBy: task.assignedWorkers
+              taskId: task.id as string,
+              workOrderNumber: task.workOrderNumber as string,
+              partNumber: (part?.partNumber || 'Unknown') as string,
+              description: task.description as string,
+              completedAt: (completedLog?.endTime || task.updatedAt) as string,
+              completedBy: task.assignedWorkers as string[]
             };
           });
           
         const carriedOverTasks = shiftTasks
-          .filter((t) => t.status !== TaskStatus.COMPLETED)
+          .filter((t) => (t.status as TaskStatus) !== TaskStatus.COMPLETED)
           .map((task) => {
-            const part = state.parts.find((p) => p.id === task.partId);
+            const part = state.parts.find((p) => (p.id as string) === (task.partId as string)) as Part | undefined;
             const totalTime = state.taskTimeLogs
-              .filter((log) => log.taskId === task.id && log.duration)
-              .reduce((sum, log) => sum + (log.duration || 0), 0);
+              .filter((log) => (log.taskId as string) === (task.id as string) && log.duration)
+              .reduce((sum, log) => sum + ((log.duration || 0) as number), 0) as number;
               
             return {
-              taskId: task.id,
-              workOrderNumber: task.workOrderNumber,
-              partNumber: part?.partNumber || 'Unknown',
-              description: task.description,
-              reason: 'Insufficient time to complete',
-              progress: Math.min(totalTime / task.estimatedDuration, 1)
+              taskId: task.id as string,
+              workOrderNumber: task.workOrderNumber as string,
+              partNumber: (part?.partNumber || 'Unknown') as string,
+              description: task.description as string,
+              reason: 'Insufficient time to complete' as string,
+              progress: Math.min((totalTime as number) / (task.estimatedDuration as number), 1) as number
             };
           });
           
         const idleEvents = state.taskTimeLogs
           .filter((log) => {
-            const task = shiftTasks.find((t) => t.id === log.taskId);
+            const task = shiftTasks.find((t) => (t.id as string) === (log.taskId as string)) as Task | undefined;
             return task && log.endTime;
           })
           .map((log) => ({
-            taskId: log.taskId,
-            workerId: log.workerId,
-            startTime: log.startTime,
-            endTime: log.endTime!,
-            duration: log.duration || 0
+            taskId: log.taskId as string,
+            workerId: log.workerId as string,
+            startTime: log.startTime as string,
+            endTime: log.endTime! as string,
+            duration: (log.duration || 0) as number
           }));
           
-        const totalTime = idleEvents.reduce((sum, event) => sum + event.duration, 0);
+        const totalTime = idleEvents.reduce((sum, event) => sum + (event.duration as number), 0) as number;
         const idleTime = idleEvents
-          .filter((event) => event.duration > 30)
-          .reduce((sum, event) => sum + event.duration, 0);
+          .filter((event) => (event.duration as number) > 30)
+          .reduce((sum, event) => sum + (event.duration as number), 0) as number;
           
         const handoverReport = {
-          id: uuidv4(),
-          shiftId,
-          date,
+          id: uuidv4() as string,
+          shiftId: shiftId as string,
+          date: date as string,
           completedTasks,
           carriedOverTasks,
           idleEvents,
           metrics: {
-            totalCompletedTasks: completedTasks.length,
-            totalCarriedOver: carriedOverTasks.length,
-            totalIdleTime: idleTime,
-            shiftUtilization: totalTime ? (totalTime - idleTime) / totalTime : 1
+            totalCompletedTasks: completedTasks.length as number,
+            totalCarriedOver: carriedOverTasks.length as number,
+            totalIdleTime: idleTime as number,
+            shiftUtilization: (totalTime as number) ? ((totalTime as number) - (idleTime as number)) / (totalTime as number) : 1 as number
           },
-          notes: '',
-          generatedBy: state.workers[0].id,
-          generatedAt: new Date().toISOString()
+          notes: '' as string,
+          generatedBy: state.workers[0].id as string,
+          generatedAt: new Date().toISOString() as string
         };
         
         set((state) => ({
           shiftReports: [
             ...state.shiftReports,
             {
-              id: uuidv4(),
-              shiftId,
-              date,
-              completedTasksCount: completedTasks.length,
-              pendingTasksCount: carriedOverTasks.length,
-              summaryNotes: '',
+              id: uuidv4() as string,
+              shiftId: shiftId as string,
+              date: date as string,
+              completedTasksCount: completedTasks.length as number,
+              pendingTasksCount: carriedOverTasks.length as number,
+              summaryNotes: '' as string,
               handoverReport
-            }
-          ]
+            } as ShiftReport
+          ] as ShiftReport[]
         }));
       },
       
-      acknowledgeHandoverReport: (reportId, workerId) => {
+      acknowledgeHandoverReport: (reportId: string, workerId: string) => {
         set((state) => ({
           shiftReports: state.shiftReports.map((report) =>
-            report.id === reportId && report.handoverReport
+            (report.id as string) === (reportId as string) && report.handoverReport
               ? {
                   ...report,
                   handoverReport: {
                     ...report.handoverReport,
-                    acknowledgedBy: workerId,
-                    acknowledgedAt: new Date().toISOString()
+                    acknowledgedBy: workerId as string,
+                    acknowledgedAt: new Date().toISOString() as string
                   }
-                }
+                } as ShiftReport
               : report
-          )
+          ) as ShiftReport[]
         }));
       },
       
-      getTaskSummaryForDate: (date) => {
+      getTaskSummaryForDate: (date: string) => {
         const state = get();
-        let tasks = state.tasks.filter((t) => t.createdAt.startsWith(date));
+        let tasks = state.tasks.filter((t) => (t.createdAt as string).startsWith(date as string)) as Task[];
         
-        if (state.viewMode === ViewMode.MY_VIEW && state.currentUser) {
-          tasks = tasks.filter((t) => t.createdBy === state.currentUser?.id);
+        if ((state.viewMode as ViewMode) === ViewMode.MY_VIEW && state.currentUser) {
+          tasks = tasks.filter((t) => (t.createdBy as string) === (state.currentUser?.id as string)) as Task[];
         }
         
         return {
-          total: tasks.length,
-          completed: tasks.filter((t) => t.status === TaskStatus.COMPLETED).length,
-          inProgress: tasks.filter((t) => t.status === TaskStatus.IN_PROGRESS).length,
-          pending: tasks.filter((t) => t.status === TaskStatus.PENDING).length,
-          carriedOver: tasks.filter((t) => t.carriedOverFromTaskId).length
+          total: tasks.length as number,
+          completed: tasks.filter((t) => (t.status as TaskStatus) === TaskStatus.COMPLETED).length as number,
+          inProgress: tasks.filter((t) => (t.status as TaskStatus) === TaskStatus.IN_PROGRESS).length as number,
+          pending: tasks.filter((t) => (t.status as TaskStatus) === TaskStatus.PENDING).length as number,
+          carriedOver: tasks.filter((t) => t.carriedOverFromTaskId).length as number
         };
       },
       
-      getExpandedTask: (taskId) => {
+      getExpandedTask: (taskId: string) => {
         const state = get();
-        const task = state.tasks.find((t) => t.id === taskId);
+        const task = state.tasks.find((t) => (t.id as string) === (taskId as string)) as Task | undefined;
         if (!task) return null;
         
-        const part = state.parts.find((p) => p.id === task.partId);
+        const part = state.parts.find((p) => (p.id as string) === (task.partId as string)) as Part | undefined;
         if (!part) return null;
         
-        const workers = state.workers.filter((w) => task.assignedWorkers.includes(w.id));
-        const timeLogs = state.taskTimeLogs.filter((log) => log.taskId === taskId);
-        const activeTimeLog = timeLogs.find((log) => !log.endTime);
+        const workers = state.workers.filter((w) => task.assignedWorkers.includes(w.id as string)) as Worker[];
+        const timeLogs = state.taskTimeLogs.filter((log) => (log.taskId as string) === (taskId as string)) as TaskTimeLog[];
+        const activeTimeLog = timeLogs.find((log) => !log.endTime) as TaskTimeLog | undefined;
         const totalDuration = timeLogs
           .filter((log) => log.duration)
-          .reduce((sum, log) => sum + (log.duration || 0), 0);
+          .reduce((sum, log) => sum + ((log.duration || 0) as number), 0) as number;
           
         return {
           ...task,
-          part,
-          workers,
-          timeLogs,
-          activeTimeLog,
-          totalDuration
+          part: part as Part,
+          workers: workers as Worker[],
+          timeLogs: timeLogs as TaskTimeLog[],
+          activeTimeLog: activeTimeLog as TaskTimeLog | undefined,
+          totalDuration: totalDuration as number
         };
       },
       
-      getTaskNotesByTaskId: (taskId) => {
+      getTaskNotesByTaskId: (taskId: string): TaskNote[] => {
         return get().taskNotes
-          .filter((note) => note.taskId === taskId)
+          .filter((note) => (note.taskId as string) === (taskId as string))
           .sort((a, b) => 
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-          );
+            new Date(b.timestamp as string).getTime() - new Date(a.timestamp as string).getTime()
+          ) as TaskNote[];
       },
       
-      getFilteredTasks: () => {
+      getFilteredTasks: (): Task[] => {
         const state = get();
-        let tasks = state.tasks;
+        let tasks = state.tasks as Task[];
         
-        if (state.viewMode === ViewMode.MY_VIEW && state.currentUser) {
-          tasks = tasks.filter((t) => t.createdBy === state.currentUser?.id);
+        if ((state.viewMode as ViewMode) === ViewMode.MY_VIEW && state.currentUser) {
+          tasks = tasks.filter((t) => (t.createdBy as string) === (state.currentUser?.id as string)) as Task[];
         }
         
-        return tasks;
+        return tasks as Task[];
       },
       
-      createStartOfShiftChecklist: (data) => {
+      createStartOfShiftChecklist: (data: any) => {
         const { shiftId, date } = data;
-        const key = `${shiftId}-${date}`;
+        const key = `${shiftId as string}-${date as string}` as string;
         
         set((state) => ({
           startChecklistStatus: {
             ...state.startChecklistStatus,
-            [key]: {
-              shiftId,
-              date,
-              acknowledgedWorkers: [],
-              completedAt: new Date().toISOString(),
-              completedBy: state.currentUser?.id
-            }
-          }
+            [key as string]: {
+              shiftId: shiftId as string,
+              date: date as string,
+              acknowledgedWorkers: [] as string[],
+              completedAt: new Date().toISOString() as string,
+              completedBy: state.currentUser?.id as string
+            } as ChecklistAcknowledgment
+          } as Record<string, ChecklistAcknowledgment>
         }));
         
         saveStartChecklist(data).catch(error => {
           console.error('Failed to save start checklist:', error);
-          get().markPendingChange(`start-checklist-${key}`);
+          get().markPendingChange(`start-checklist-${key as string}` as string);
         });
       },
       
-      createEndOfShiftCleanup: (data) => {
+      createEndOfShiftCleanup: (data: any) => {
         const { shiftId, date } = data;
-        const key = `${shiftId}-${date}`;
+        const key = `${shiftId as string}-${date as string}` as string;
         
         set((state) => ({
           endCleanupStatus: {
             ...state.endCleanupStatus,
-            [key]: {
-              shiftId,
-              date,
-              acknowledgedWorkers: [],
-              completedAt: new Date().toISOString(),
-              completedBy: state.currentUser?.id
-            }
-          }
+            [key as string]: {
+              shiftId: shiftId as string,
+              date: date as string,
+              acknowledgedWorkers: [] as string[],
+              completedAt: new Date().toISOString() as string,
+              completedBy: state.currentUser?.id as string
+            } as ChecklistAcknowledgment
+          } as Record<string, ChecklistAcknowledgment>
         }));
         
         saveEndCleanup(data).catch(error => {
           console.error('Failed to save end cleanup:', error);
-          get().markPendingChange(`end-cleanup-${key}`);
+          get().markPendingChange(`end-cleanup-${key as string}` as string);
         });
       },
 
-      acknowledgeStartChecklist: (shiftId, date, workerId) => {
-        const key = `${shiftId}-${date}`;
+      acknowledgeStartChecklist: (shiftId: string, date: string, workerId: string) => {
+        const key = `${shiftId as string}-${date as string}` as string;
         set((state) => {
-          const current = state.startChecklistStatus[key];
+          const current = state.startChecklistStatus[key as string] as ChecklistAcknowledgment | undefined;
           if (!current) return state;
           
-          const acknowledgedWorkers = [...new Set([...current.acknowledgedWorkers, workerId])];
+          const acknowledgedWorkers = [...new Set([...current.acknowledgedWorkers, workerId as string])] as string[];
           
           return {
             ...state,
             startChecklistStatus: {
               ...state.startChecklistStatus,
-              [key]: {
+              [key as string]: {
                 ...current,
-                acknowledgedWorkers
-              }
-            }
+                acknowledgedWorkers: acknowledgedWorkers as string[]
+              } as ChecklistAcknowledgment
+            } as Record<string, ChecklistAcknowledgment>
           };
         });
       },
 
-      acknowledgeEndCleanup: (shiftId, date, workerId) => {
-        const key = `${shiftId}-${date}`;
+      acknowledgeEndCleanup: (shiftId: string, date: string, workerId: string) => {
+        const key = `${shiftId as string}-${date as string}` as string;
         set((state) => {
-          const current = state.endCleanupStatus[key];
+          const current = state.endCleanupStatus[key as string] as ChecklistAcknowledgment | undefined;
           if (!current) return state;
           
-          const acknowledgedWorkers = [...new Set([...current.acknowledgedWorkers, workerId])];
+          const acknowledgedWorkers = [...new Set([...current.acknowledgedWorkers, workerId as string])] as string[];
           
           return {
             ...state,
             endCleanupStatus: {
               ...state.endCleanupStatus,
-              [key]: {
+              [key as string]: {
                 ...current,
-                acknowledgedWorkers
-              }
-            }
+                acknowledgedWorkers: acknowledgedWorkers as string[]
+              } as ChecklistAcknowledgment
+            } as Record<string, ChecklistAcknowledgment>
           };
         });
       },
 
-      isStartChecklistComplete: (shiftId: string, date: string) => {
-        const key = `${shiftId}-${date}`;
-        const checklist = get().startChecklistStatus[key];
-        if (!checklist) return false;
+      isStartChecklistComplete: (shiftId: string, date: string): boolean => {
+        const key = `${shiftId as string}-${date as string}` as string;
+        const checklist = get().startChecklistStatus[key as string] as ChecklistAcknowledgment | undefined;
+        if (!checklist) return false as boolean;
         
-        const shiftWorkers = get().workers.filter(w => w.shiftId === shiftId);
-        if (shiftWorkers.length === 0) return !!checklist.completedAt;
-        
-        return shiftWorkers.every(worker => 
-          checklist.acknowledgedWorkers.includes(worker.id)
-        );
-      },
-
-      isEndCleanupComplete: (shiftId: string, date: string) => {
-        const key = `${shiftId}-${date}`;
-        const cleanup = get().endCleanupStatus[key];
-        if (!cleanup) return false;
-        
-        const shiftWorkers = get().workers.filter(w => w.shiftId === shiftId);
-        if (shiftWorkers.length === 0) return !!cleanup.completedAt;
+        const shiftWorkers = get().workers.filter(w => (w.shiftId as string) === (shiftId as string)) as Worker[];
+        if ((shiftWorkers.length as number) === 0) return !!(checklist.completedAt as string);
         
         return shiftWorkers.every(worker => 
-          cleanup.acknowledgedWorkers.includes(worker.id)
-        );
+          checklist.acknowledgedWorkers.includes(worker.id as string)
+        ) as boolean;
       },
 
-      getStartChecklistAcknowledgments: (shiftId: string, date: string) => {
-        const key = `${shiftId}-${date}`;
-        return get().startChecklistStatus[key]?.acknowledgedWorkers || [];
+      isEndCleanupComplete: (shiftId: string, date: string): boolean => {
+        const key = `${shiftId as string}-${date as string}` as string;
+        const cleanup = get().endCleanupStatus[key as string] as ChecklistAcknowledgment | undefined;
+        if (!cleanup) return false as boolean;
+        
+        const shiftWorkers = get().workers.filter(w => (w.shiftId as string) === (shiftId as string)) as Worker[];
+        if ((shiftWorkers.length as number) === 0) return !!(cleanup.completedAt as string);
+        
+        return shiftWorkers.every(worker => 
+          cleanup.acknowledgedWorkers.includes(worker.id as string)
+        ) as boolean;
       },
 
-      getEndCleanupAcknowledgments: (shiftId: string, date: string) => {
-        const key = `${shiftId}-${date}`;
-        return get().endCleanupStatus[key]?.acknowledgedWorkers || [];
+      getStartChecklistAcknowledgments: (shiftId: string, date: string): string[] => {
+        const key = `${shiftId as string}-${date as string}` as string;
+        return (get().startChecklistStatus[key as string]?.acknowledgedWorkers || []) as string[];
       },
 
-      getCarriedOverTasks: (date: string) => {
+      getEndCleanupAcknowledgments: (shiftId: string, date: string): string[] => {
+        const key = `${shiftId as string}-${date as string}` as string;
+        return (get().endCleanupStatus[key as string]?.acknowledgedWorkers || []) as string[];
+      },
+
+      getCarriedOverTasks: (date: string): Task[] => {
         const state = get();
         let tasks = state.tasks.filter(task => 
           task.carriedOverFromTaskId && 
-          task.createdAt.startsWith(date)
-        );
+          (task.createdAt as string).startsWith(date as string)
+        ) as Task[];
         
-        if (state.viewMode === ViewMode.MY_VIEW && state.currentUser) {
-          tasks = tasks.filter((t) => t.createdBy === state.currentUser?.id);
+        if ((state.viewMode as ViewMode) === ViewMode.MY_VIEW && state.currentUser) {
+          tasks = tasks.filter((t) => (t.createdBy as string) === (state.currentUser?.id as string)) as Task[];
         }
         
-        return tasks;
+        return tasks as Task[];
       },
       
-      printTask: (taskId) => {
-        const task = get().getExpandedTask(taskId);
+      printTask: (taskId: string) => {
+        const task = get().getExpandedTask(taskId as string);
         if (!task) return;
         
         const printWindow = window.open('', '_blank');
@@ -972,7 +972,7 @@ export const useShopStore = create(
           <!DOCTYPE html>
           <html>
             <head>
-              <title>Task ${task.workOrderNumber}</title>
+              <title>Task ${task.workOrderNumber as string}</title>
               <style>
                 body { font-family: Arial, sans-serif; padding: 20px; }
                 h1 { color: #333; }
@@ -981,49 +981,49 @@ export const useShopStore = create(
               </style>
             </head>
             <body>
-              <h1>Task Details: ${task.workOrderNumber}</h1>
+              <h1>Task Details: ${task.workOrderNumber as string}</h1>
               
               <div class="section">
                 <div class="label">Part Number:</div>
-                <div>${task.part.partNumber} (${task.part.revision})</div>
+                <div>${task.part.partNumber as string} (${task.part.revision as string})</div>
               </div>
               
               <div class="section">
                 <div class="label">Description:</div>
-                <div>${task.description}</div>
+                <div>${task.description as string}</div>
               </div>
               
               <div class="section">
                 <div class="label">Status:</div>
-                <div>${task.status}</div>
+                <div>${task.status as string}</div>
               </div>
               
               <div class="section">
                 <div class="label">Priority:</div>
-                <div>${task.priority}</div>
+                <div>${task.priority as string}</div>
               </div>
               
               <div class="section">
                 <div class="label">Estimated Duration:</div>
-                <div>${task.estimatedDuration} minutes</div>
+                <div>${task.estimatedDuration as number} minutes</div>
               </div>
               
               <div class="section">
                 <div class="label">Assigned Workers:</div>
-                <div>${task.workers.map(w => w.name).join(', ') || 'None'}</div>
+                <div>${task.workers.map(w => w.name as string).join(', ') || 'None'}</div>
               </div>
               
-              ${task.totalDuration ? `
+              ${(task.totalDuration as number) ? `
                 <div class="section">
                   <div class="label">Total Time Spent:</div>
-                  <div>${task.totalDuration} minutes</div>
+                  <div>${task.totalDuration as number} minutes</div>
                 </div>
               ` : ''}
             </body>
           </html>
         `;
         
-        printWindow.document.write(html);
+        printWindow.document.write(html as string);
         printWindow.document.close();
         printWindow.print();
       }
@@ -1031,38 +1031,38 @@ export const useShopStore = create(
     {
       name: 'shop-storage',
       partialize: (state) => ({
-        shifts: state.shifts,
-        workers: state.workers,
-        parts: state.parts,
-        tasks: state.tasks,
-        taskNotes: state.taskNotes,
-        taskTimeLogs: state.taskTimeLogs,
-        shiftReports: state.shiftReports,
-        users: state.users,
-        currentUser: state.currentUser,
-        viewMode: state.viewMode,
-        startChecklistStatus: state.startChecklistStatus,
-        endCleanupStatus: state.endCleanupStatus,
-        lastSyncTime: state.lastSyncTime,
-        pendingChanges: state.pendingChanges,
-        autoSyncEnabled: state.autoSyncEnabled
+        shifts: state.shifts as Shift[],
+        workers: state.workers as Worker[],
+        parts: state.parts as Part[],
+        tasks: state.tasks as Task[],
+        taskNotes: state.taskNotes as TaskNote[],
+        taskTimeLogs: state.taskTimeLogs as TaskTimeLog[],
+        shiftReports: state.shiftReports as ShiftReport[],
+        users: state.users as User[],
+        currentUser: state.currentUser as User | null,
+        viewMode: state.viewMode as ViewMode,
+        startChecklistStatus: state.startChecklistStatus as Record<string, ChecklistAcknowledgment>,
+        endCleanupStatus: state.endCleanupStatus as Record<string, ChecklistAcknowledgment>,
+        lastSyncTime: state.lastSyncTime as string | null,
+        pendingChanges: state.pendingChanges as string[],
+        autoSyncEnabled: state.autoSyncEnabled as boolean
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           // Ensure currentUser is always defined and has a valid id after rehydration
-          if (!state.currentUser || !state.currentUser.id) {
-            state.currentUser = defaultUser;
+          if (!state.currentUser || !(state.currentUser.id as string)) {
+            state.currentUser = defaultUser as User;
           }
           
           // Ensure we have the predefined workers and users
-          if (!state.users || state.users.length === 0) {
-            state.users = mockUsers;
+          if (!state.users || (state.users.length as number) === 0) {
+            state.users = mockUsers as User[];
           }
-          if (!state.workers || state.workers.length === 0) {
-            state.workers = mockWorkers;
+          if (!state.workers || (state.workers.length as number) === 0) {
+            state.workers = mockWorkers as Worker[];
           }
-          if (!state.shifts || state.shifts.length === 0) {
-            state.shifts = mockShifts;
+          if (!state.shifts || (state.shifts.length as number) === 0) {
+            state.shifts = mockShifts as Shift[];
           }
           
           // Initialize the app after rehydration

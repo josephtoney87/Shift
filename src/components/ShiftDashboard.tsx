@@ -19,8 +19,7 @@ import SearchBar from './SearchBar';
 import NotesExporter from './NotesExporter';
 import ShiftNotesPanel from './ShiftNotesPanel';
 import UserSelector from './UserSelector';
-import OfflineNotice from './OfflineNotice';
-import ConnectionStatus from './ConnectionStatus';
+import EnhancedOfflineNotice from './EnhancedOfflineNotice';
 import Tooltip from './Tooltip';
 
 const ShiftDashboard: React.FC = () => {
@@ -86,7 +85,8 @@ const ShiftDashboard: React.FC = () => {
       <div className="flex items-center justify-center h-screen bg-neutral-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-neutral-600">Loading dashboard...</p>
+          <p className="text-neutral-600">Initializing synchronization...</p>
+          <p className="text-neutral-500 text-sm mt-2">Setting up multi-device sync...</p>
         </div>
       </div>
     );
@@ -270,13 +270,8 @@ const ShiftDashboard: React.FC = () => {
         <ShiftHeader onDateChange={handleDateChange} />
         <StatsBar stats={statsData} />
         
-        {/* Connection Status */}
-        <div className="px-4 py-2">
-          <ConnectionStatus />
-        </div>
-        
-        {/* Offline Notice */}
-        <OfflineNotice pendingChanges={pendingCount} />
+        {/* Enhanced Offline Notice */}
+        <EnhancedOfflineNotice />
         
         <div className="bg-white border-b border-neutral-200 px-4 py-2">
           <div className="flex items-center justify-between">
@@ -455,10 +450,10 @@ const ShiftDashboard: React.FC = () => {
                 </h3>
                 <p className="text-neutral-500 max-w-md">
                   {isFutureDate
-                    ? `Schedule tasks for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Task" buttons above to get started. All data syncs across devices.`
+                    ? `Schedule tasks for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Task" buttons above to get started. All data syncs automatically across devices.`
                     : viewMode === ViewMode.MY_VIEW
                     ? `You have no tasks scheduled for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Task" buttons above to create a task, or switch to "All Data" view to see tasks from other users.`
-                    : `There are no tasks scheduled for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Task" buttons above to schedule a task for this date.`
+                    : `There are no tasks scheduled for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Task" buttons above to schedule a task for this date. Changes sync automatically across all devices.`
                   }
                 </p>
               </div>

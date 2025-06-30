@@ -4,6 +4,7 @@ import { Calendar, Plus, AlertCircle } from 'lucide-react';
 import { useShopStore } from '../store/useShopStore';
 import { ShiftType, TaskStatus, TaskPriority } from '../types';
 import SyncStatus from './SyncStatus';
+import RealtimeIndicator from './RealtimeIndicator';
 import Tooltip from './Tooltip';
 
 interface ShiftHeaderProps {
@@ -80,6 +81,9 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
           <h1 className="text-2xl font-bold mb-4 md:mb-0">CNC Shop Shift Management</h1>
           
           <div className="flex items-center space-x-4">
+            {/* Real-time Status Indicator */}
+            <RealtimeIndicator />
+            
             {/* Sync Status with Tooltip */}
             <Tooltip content="Shows whether changes are synced to the server. Click to retry sync if offline" position="bottom">
               <div>

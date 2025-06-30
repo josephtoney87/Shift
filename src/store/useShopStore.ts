@@ -50,6 +50,7 @@ interface ShopState {
   pendingChanges: string[];
   isInitialized: boolean;
   autoSyncEnabled: boolean;
+  realtimeConnected: boolean;
   
   // Actions
   setSelectedTaskId: (id: string | null) => void;
@@ -64,6 +65,7 @@ interface ShopState {
   loadCloudData: () => Promise<void>;
   forceSyncAllData: () => Promise<boolean>;
   markPendingChange: (changeId: string) => void;
+  refreshFromCloud: () => Promise<void>;
   
   // User actions
   addUser: (userData: Omit<User, 'id' | 'createdAt'>) => void;
@@ -168,6 +170,7 @@ export const useShopStore = create(
       pendingChanges: [],
       isInitialized: false,
       autoSyncEnabled: true,
+      realtimeConnected: false,
       
       setSelectedTaskId: (id) => set({ selectedTaskId: id }),
       setTaskModalOpen: (isOpen) => set({ isTaskModalOpen: isOpen }),
@@ -191,6 +194,7 @@ export const useShopStore = create(
           // Initialize real-time subscriptions if credentials are available
           if (hasValidCredentials()) {
             await realtimeService.initialize();
+            set({ realtimeConnected: true });
             console.log('📡 Real-time subscriptions initialized');
           }
           
@@ -203,6 +207,16 @@ export const useShopStore = create(
           });
           
           console.log('✅ Application initialized successfully');
+
+          // Setup real-time event listeners
+          window.addEventListener('realtimeUpdate', ((event: CustomEvent) => {
+            const { table, operation, newData, oldData } = event.detail;
+            console.log(`📡 Real-time update received: ${operation} on ${table}`);
+            
+            // The realtimeService already handles updating the store directly
+            // This event can be used for additional UI updates or notifications
+          }) as EventListener);
+
         } catch (error) {
           console.error('❌ Failed to initialize application:', error);
           set({ isInitialized: true }); // Mark as initialized even if failed
@@ -260,6 +274,28 @@ export const useShopStore = create(
         } catch (error) {
           console.error('❌ Failed to load data:', error);
           // Continue with existing state
+        }
+      },
+
+      refreshFromCloud: async () => {
+        if (!hasValidCredentials()) {
+          console.log('❌ Cannot refresh - no cloud credentials');
+          return;
+        }
+
+        try {
+          console.log('🔄 Refreshing data from cloud...');
+          const cloudData = await loadAllCloudData();
+          
+          if (cloudData) {
+            set({
+              ...cloudData,
+              lastSyncTime: new Date().toISOString()
+            });
+            console.log('✅ Data refreshed from cloud');
+          }
+        } catch (error) {
+          console.error('❌ Failed to refresh from cloud:', error);
         }
       },
 

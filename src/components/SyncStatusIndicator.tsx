@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Wifi, WifiOff, Cloud, CloudOff, Sync, Check, 
-  AlertTriangle, Clock, Database, Users 
-} from 'lucide-react';
+import { Wifi, WifiOff, Cloud, CloudOff, FolderSync as Sync, Check, AlertTriangle, Clock, Database, Users } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
 import { hasValidCredentials } from '../services/supabase';
 import Tooltip from './Tooltip';

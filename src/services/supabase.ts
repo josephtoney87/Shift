@@ -4,8 +4,8 @@ import type { Database } from '../types/supabase';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Use placeholder values for demo if not configured
-const url = supabaseUrl || https://uuwzniihpwqlodqlkwrw.supabase.co';
+// Use actual credentials
+const url = supabaseUrl || 'https://uuwzniihpwqlodqlkwrw.supabase.co';
 const key = supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1d3puaWlocHdxbG9kcWxrd3J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTEzNzUsImV4cCI6MjA2Njg2NzM3NX0.OtQ-HRo98JV8BvpMnPDWJLmiEe9HMhTcGwb_UHIkFM4';
 
 export const supabase = createClient<Database>(url, key, {

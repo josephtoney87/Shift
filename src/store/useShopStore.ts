@@ -398,14 +398,60 @@ export const useShopStore = create(
       },
       
       deleteShift: (id: string) => {
-        const shiftToDelete = get().shifts.find(s => (s.id as string) === (id as string)) as Shift | undefined;
+        console.log(`🗑️ Deleting shift with ID: ${id}`);
+        
+        const state = get();
+        const shiftToDelete = state.shifts.find(s => (s.id as string) === (id as string)) as Shift | undefined;
+        
+        if (!shiftToDelete) {
+          console.warn(`⚠️ Shift with ID ${id} not found`);
+          return;
+        }
+        
+        // Remove shift from local state immediately
         set((state) => ({
           shifts: state.shifts.filter((shift) => (shift.id as string) !== (id as string)) as Shift[]
         }));
         
-        if (shiftToDelete) {
-          persistenceService.saveData('shifts', { ...shiftToDelete, deleted_at: new Date().toISOString() as string } as any, 'delete');
+        console.log(`✅ Shift ${shiftToDelete.type} removed from local state`);
+        
+        // Also remove any workers assigned to this shift
+        const workersToRemove = state.workers.filter(w => (w.shiftId as string) === (id as string));
+        if (workersToRemove.length > 0) {
+          set((state) => ({
+            workers: state.workers.filter((worker) => (worker.shiftId as string) !== (id as string)) as Worker[]
+          }));
+          console.log(`✅ Removed ${workersToRemove.length} workers from deleted shift`);
         }
+        
+        // Remove any tasks assigned to this shift
+        const tasksToRemove = state.tasks.filter(t => (t.shiftId as string) === (id as string));
+        if (tasksToRemove.length > 0) {
+          set((state) => ({
+            tasks: state.tasks.filter((task) => (task.shiftId as string) !== (id as string)) as Task[]
+          }));
+          console.log(`✅ Removed ${tasksToRemove.length} tasks from deleted shift`);
+        }
+        
+        // Sync deletion to cloud/local storage
+        if (hasValidCredentials()) {
+          // Use the database delete function for cloud sync
+          dbDeleteShift(id as string).then(() => {
+            console.log(`☁️ Shift ${id} deleted from cloud database`);
+          }).catch(error => {
+            console.error(`❌ Failed to delete shift ${id} from cloud:`, error);
+            // Mark as pending change for retry
+            get().markPendingChange(`shift-delete-${id as string}` as string);
+          });
+        } else {
+          // For local storage, mark as deleted
+          persistenceService.saveData('shifts', { 
+            ...shiftToDelete, 
+            deleted_at: new Date().toISOString() as string 
+          } as any, 'delete');
+        }
+        
+        console.log(`🔄 Shift deletion process completed for ${id}`);
       },
       
       addTask: (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {

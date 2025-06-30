@@ -9,7 +9,8 @@ import {
   TaskPriority, 
   TaskNote,
   TaskTimeLog, 
-  ShiftReport 
+  ShiftReport,
+  User
 } from '../types';
 import { format } from 'date-fns';
 
@@ -20,8 +21,78 @@ export const mockShifts: Shift[] = [
   { id: 'shift-3', type: ShiftType.S3, startTime: '22:00', endTime: '06:00' }
 ];
 
-// Empty initial workers array - workers will be added manually
-export const mockWorkers: Worker[] = [];
+// Pre-defined shift workers
+export const mockWorkers: Worker[] = [
+  // 2nd shift workers
+  { 
+    id: 'worker-daniel', 
+    name: 'Daniel Lerner', 
+    role: WorkerRole.OPERATOR, 
+    shiftId: 'shift-2',
+    isManual: false
+  },
+  { 
+    id: 'worker-kyle', 
+    name: 'Kyle Riddle', 
+    role: WorkerRole.OPERATOR, 
+    shiftId: 'shift-2',
+    isManual: false
+  },
+  // 3rd shift workers
+  { 
+    id: 'worker-collin', 
+    name: 'Collin Taylor', 
+    role: WorkerRole.OPERATOR, 
+    shiftId: 'shift-3',
+    isManual: false
+  },
+  { 
+    id: 'worker-matt', 
+    name: 'Matt Barrett', 
+    role: WorkerRole.OPERATOR, 
+    shiftId: 'shift-3',
+    isManual: false
+  }
+];
+
+// Pre-defined users corresponding to the workers
+export const mockUsers: User[] = [
+  {
+    id: 'user-default',
+    name: 'Default User',
+    email: 'default@company.com',
+    color: '#3B82F6',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'user-daniel',
+    name: 'Daniel Lerner',
+    email: 'daniel.lerner@company.com',
+    color: '#EF4444',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'user-kyle',
+    name: 'Kyle Riddle',
+    email: 'kyle.riddle@company.com',
+    color: '#10B981',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'user-collin',
+    name: 'Collin Taylor',
+    email: 'collin.taylor@company.com',
+    color: '#F59E0B',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'user-matt',
+    name: 'Matt Barrett',
+    email: 'matt.barrett@company.com',
+    color: '#8B5CF6',
+    createdAt: new Date().toISOString()
+  }
+];
 
 // Mock Parts
 export const mockParts: Part[] = [

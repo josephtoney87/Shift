@@ -6,7 +6,7 @@ import {
   Shift, Worker, Part, Task, TaskNote, TaskTimeLog, ShiftReport, User,
   TaskStatus, TaskPriority, WorkerRole, ShiftType, ViewMode
 } from '../types';
-import { mockShifts, mockWorkers, mockParts, mockTasks, mockTaskNotes, mockTaskTimeLogs, mockShiftReports } from '../data/mockData';
+import { mockShifts, mockWorkers, mockParts, mockTasks, mockTaskNotes, mockTaskTimeLogs, mockShiftReports, mockUsers } from '../data/mockData';
 import { persistenceService } from '../services/persistenceService';
 import { realtimeService } from '../services/realtimeService';
 import { hasValidCredentials } from '../services/supabase';
@@ -133,14 +133,8 @@ interface ShopState {
   printTask: (taskId: string) => void;
 }
 
-// Default user
-const defaultUser: User = {
-  id: 'user-1',
-  name: 'Default User',
-  email: 'default@company.com',
-  color: '#3B82F6',
-  createdAt: new Date().toISOString()
-};
+// Default user - use Daniel Lerner as default since he's on 2nd shift
+const defaultUser: User = mockUsers.find(u => u.name === 'Daniel Lerner') || mockUsers[0];
 
 // Network status detection
 const isOnline = () => {
@@ -157,7 +151,7 @@ export const useShopStore = create(
       taskNotes: mockTaskNotes,
       taskTimeLogs: mockTaskTimeLogs,
       shiftReports: mockShiftReports,
-      users: [defaultUser],
+      users: mockUsers,
       selectedTaskId: null,
       isTaskModalOpen: false,
       selectedDate: format(new Date(), 'yyyy-MM-dd'),
@@ -264,8 +258,17 @@ export const useShopStore = create(
           const data = await persistenceService.loadAllData();
           
           if (data) {
-            set({
+            // Merge with default data to ensure we have the predefined workers
+            const mergedData = {
               ...data,
+              users: data.users && data.users.length > 0 ? data.users : mockUsers,
+              workers: data.workers && data.workers.length > 0 ? data.workers : mockWorkers,
+              shifts: data.shifts && data.shifts.length > 0 ? data.shifts : mockShifts,
+              parts: data.parts && data.parts.length > 0 ? data.parts : mockParts
+            };
+            
+            set({
+              ...mergedData,
               lastSyncTime: new Date().toISOString(),
               pendingChanges: []
             });
@@ -288,8 +291,17 @@ export const useShopStore = create(
           const cloudData = await loadAllCloudData();
           
           if (cloudData) {
-            set({
+            // Merge with defaults to preserve predefined workers
+            const mergedData = {
               ...cloudData,
+              users: cloudData.users && cloudData.users.length > 0 ? cloudData.users : mockUsers,
+              workers: cloudData.workers && cloudData.workers.length > 0 ? cloudData.workers : mockWorkers,
+              shifts: cloudData.shifts && cloudData.shifts.length > 0 ? cloudData.shifts : mockShifts,
+              parts: cloudData.parts && cloudData.parts.length > 0 ? cloudData.parts : mockParts
+            };
+            
+            set({
+              ...mergedData,
               lastSyncTime: new Date().toISOString()
             });
             console.log('✅ Data refreshed from cloud');
@@ -1040,6 +1052,17 @@ export const useShopStore = create(
           // Ensure currentUser is always defined and has a valid id after rehydration
           if (!state.currentUser || !state.currentUser.id) {
             state.currentUser = defaultUser;
+          }
+          
+          // Ensure we have the predefined workers and users
+          if (!state.users || state.users.length === 0) {
+            state.users = mockUsers;
+          }
+          if (!state.workers || state.workers.length === 0) {
+            state.workers = mockWorkers;
+          }
+          if (!state.shifts || state.shifts.length === 0) {
+            state.shifts = mockShifts;
           }
           
           // Initialize the app after rehydration

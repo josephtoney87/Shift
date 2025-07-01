@@ -15,7 +15,6 @@ import SimpleView from './SimpleView';
 import CalendarView from './CalendarView';
 import SearchBar from './SearchBar';
 import NotesExporter from './NotesExporter';
-import ShiftNotesPanel from './ShiftNotesPanel';
 import UserSelector from './UserSelector';
 import EnhancedOfflineNotice from './EnhancedOfflineNotice';
 import Tooltip from './Tooltip';
@@ -354,10 +353,8 @@ const ShiftDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-hidden flex">
-        {/* Left side - Main dashboard */}
-        <div className="flex-1 overflow-hidden">
+      {/* Main Content - Full Width */}
+      <div className="flex-1 overflow-hidden">
         <div 
           className="h-full overflow-y-auto p-4 transition-transform duration-200"
           style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }}
@@ -405,14 +402,6 @@ const ShiftDashboard: React.FC = () => {
               })}
             </div>
           )}
-        </div>
-        </div>
-
-        {/* Right side - Shift Notes Panel */}
-        <div className="w-80 border-l border-neutral-200 bg-neutral-50 overflow-hidden">
-          <div className="h-full overflow-y-auto p-4">
-            <ShiftNotesPanel selectedDate={currentDate} />
-          </div>
         </div>
       </div>
 

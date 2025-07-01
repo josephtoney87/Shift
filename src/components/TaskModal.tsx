@@ -72,7 +72,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
     createEndOfShiftCleanup,
     moveTaskToNextDay,
     moveTaskToShift,
-    currentUser
+    currentUser,
+    startChecklists,
+    endCleanups
   } = useShopStore();
   
   const [manualWorkerName, setManualWorkerName] = useState('');
@@ -82,6 +84,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
   
   const task = taskId ? getExpandedTask(taskId) : null;
   const taskNotes = taskId ? getTaskNotesByTaskId(taskId) : [];
+  
+  // Get existing checklist data for this shift and date
+  const existingStartChecklist = startChecklists.find(c => 
+    c.shiftId === (task?.shiftId || shiftId) && c.date === selectedDate
+  );
+  
+  const existingEndCleanup = endCleanups.find(c => 
+    c.shiftId === (task?.shiftId || shiftId) && c.date === selectedDate
+  );
   
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<TaskFormData>({
     defaultValues: {
@@ -185,7 +196,39 @@ const TaskModal: React.FC<TaskModalProps> = ({
     } else {
       reset();
     }
-  }, [task, mode, reset, setValue]);
+
+    // Load existing checklist data if available
+    if (existingStartChecklist) {
+      setValue('startChecklist.workOrderNumber', existingStartChecklist.workOrderNumber);
+      setValue('startChecklist.palletNumber', existingStartChecklist.palletNumber);
+      setValue('startChecklist.partNumber', existingStartChecklist.partNumber);
+      setValue('startChecklist.programNumber', existingStartChecklist.programNumber);
+      setValue('startChecklist.startingBlockNumber', existingStartChecklist.startingBlockNumber);
+      setValue('startChecklist.toolNumber', existingStartChecklist.toolNumber);
+      setValue('startChecklist.toolsRequiringAttention', existingStartChecklist.toolsRequiringAttention.join(', '));
+      setValue('startChecklist.immediateAttentionTools', existingStartChecklist.immediateAttentionTools.join(', '));
+      setValue('startChecklist.notes', existingStartChecklist.notes);
+      
+      // Set safety checks
+      Object.entries(existingStartChecklist.safetyChecks).forEach(([key, value]) => {
+        setValue(`startChecklist.safetyChecks.${key}` as any, value);
+      });
+    }
+
+    if (existingEndCleanup) {
+      setValue('endCleanup.notes', existingEndCleanup.notes);
+      
+      // Set preparation checks
+      Object.entries(existingEndCleanup.preparationChecks).forEach(([key, value]) => {
+        setValue(`endCleanup.preparationChecks.${key}` as any, value);
+      });
+      
+      // Set cleaning checks
+      Object.entries(existingEndCleanup.cleaningChecks).forEach(([key, value]) => {
+        setValue(`endCleanup.cleaningChecks.${key}` as any, value);
+      });
+    }
+  }, [task, mode, reset, setValue, existingStartChecklist, existingEndCleanup]);
 
   const handleAddNote = () => {
     if (taskId && noteText.trim()) {
@@ -472,6 +515,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center">
                   <CheckCircle2 className="h-5 w-5 mr-2 text-primary-600" />
                   Start of Shift Checklist
+                  {existingStartChecklist && (
+                    <span className="ml-2 text-sm text-success-600 bg-success-100 px-2 py-1 rounded">
+                      Saved by {existingStartChecklist.modifiedBy} at {format(new Date(existingStartChecklist.lastModified), 'HH:mm')}
+                    </span>
+                  )}
                 </h4>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -626,6 +674,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center">
                   <ClipboardList className="h-5 w-5 mr-2 text-warning-600" />
                   End of Shift Cleanup
+                  {existingEndCleanup && (
+                    <span className="ml-2 text-sm text-success-600 bg-success-100 px-2 py-1 rounded">
+                      Saved by {existingEndCleanup.modifiedBy} at {format(new Date(existingEndCleanup.lastModified), 'HH:mm')}
+                    </span>
+                  )}
                 </h4>
 
                 <div className="space-y-4">

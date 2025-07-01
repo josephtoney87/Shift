@@ -107,6 +107,7 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
                         onClick={() => onTaskClick(task.id)}
                         onMoveBack={onMoveBack ? () => onMoveBack(task.id) : undefined}
                         onMoveForward={onMoveForward ? () => onMoveForward(task.id) : undefined}
+                        shiftType={shift.type}
                       />
                     ))}
                   </div>

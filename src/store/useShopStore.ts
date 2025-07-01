@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   Shift, Worker, Part, Task, TaskNote, TaskTimeLog, ShiftReport, User,
@@ -85,6 +85,7 @@ interface ShopState {
   deleteTask: (taskId: string) => void;
   moveTaskToShift: (taskId: string, newShiftId: string) => void;
   carryOverTask: (taskId: string, newShiftId: string) => void;
+  moveTaskToNextDay: (taskId: string) => void;
   
   // Worker actions
   addManualWorker: (name: string, shiftId: string) => string;
@@ -572,6 +573,42 @@ export const useShopStore = create(
                   updatedAt: new Date().toISOString()
                 }
               : task
+          )
+        }));
+        
+        const updatedTask = get().tasks.find(t => t.id === taskId);
+        if (updatedTask) {
+          persistenceService.saveData('tasks', updatedTask, 'update');
+        }
+      },
+
+      moveTaskToNextDay: (taskId) => {
+        const state = get();
+        const task = state.tasks.find(t => t.id === taskId);
+        
+        if (!task) return;
+        
+        // Find the first shift (S1) for the next day
+        const s1Shift = state.shifts.find(s => s.type === ShiftType.S1);
+        if (!s1Shift) return;
+        
+        // Calculate next day
+        const currentDate = new Date(task.createdAt);
+        const nextDay = addDays(currentDate, 1);
+        const nextDayString = format(nextDay, 'yyyy-MM-dd');
+        
+        set((state) => ({
+          tasks: state.tasks.map((t) =>
+            t.id === taskId
+              ? {
+                  ...t,
+                  shiftId: s1Shift.id,
+                  status: TaskStatus.PENDING,
+                  createdAt: `${nextDayString}T${t.createdAt.split('T')[1]}`,
+                  updatedAt: new Date().toISOString(),
+                  carriedOverFromTaskId: taskId // Mark as carried over
+                }
+              : t
           )
         }));
         

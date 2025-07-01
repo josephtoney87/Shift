@@ -2,10 +2,11 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   Clock, UserCircle, CheckCircle2, AlertTriangle, AlertCircle, 
-  Square, RotateCcw, ArrowLeftCircle, ArrowRightCircle, RefreshCw
+  Square, RotateCcw, ArrowLeftCircle, ArrowRightCircle, RefreshCw, ArrowRight
 } from 'lucide-react';
 import { TaskStatus, Task, Worker, Part } from '../types';
 import { useShopStore } from '../store/useShopStore';
+import { format, addDays } from 'date-fns';
 import Tooltip from './Tooltip';
 
 interface TaskCardProps {
@@ -16,15 +17,17 @@ interface TaskCardProps {
   onClick: () => void;
   onMoveBack?: () => void;
   onMoveForward?: () => void;
+  shiftType?: string;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({ 
   task, 
   onClick,
   onMoveBack,
-  onMoveForward
+  onMoveForward,
+  shiftType
 }) => {
-  const { updateTaskStatus } = useShopStore();
+  const { updateTaskStatus, moveTaskToNextDay } = useShopStore();
 
   const statusConfig = {
     [TaskStatus.PENDING]: { 
@@ -57,6 +60,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
       onMoveBack();
     } else if (direction === 'forward' && onMoveForward) {
       onMoveForward();
+    }
+  };
+
+  const handleMoveToNextDay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextDay = format(addDays(new Date(task.createdAt), 1), 'MMMM d, yyyy');
+    if (window.confirm(`Move this note to tomorrow (${nextDay}) first shift?`)) {
+      moveTaskToNextDay(task.id);
     }
   };
 
@@ -148,6 +159,19 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   >
                     <RotateCcw className="h-4 w-4 mr-1" />
                     <span className="text-xs">Continue</span>
+                  </button>
+                </Tooltip>
+              )}
+
+              {/* Next Day Button - Only show for third shift (S3) */}
+              {shiftType === 'S3' && (
+                <Tooltip content="Move to tomorrow's first shift" position="top">
+                  <button
+                    onClick={handleMoveToNextDay}
+                    className="p-1.5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center"
+                  >
+                    <ArrowRight className="h-4 w-4 mr-1" />
+                    <span className="text-xs">Next Day</span>
                   </button>
                 </Tooltip>
               )}

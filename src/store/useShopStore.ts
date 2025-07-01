@@ -415,7 +415,7 @@ export const useShopStore = create(
         
         console.log(`📊 Related data: ${workersToRemove.length} workers, ${tasksToRemove.length} notes`);
         
-        // Remove shift and all related data from local state immediately
+        // CRITICAL: Remove shift and all related data from local state IMMEDIATELY
         set((state) => ({
           shifts: state.shifts.filter((shift) => shift.id !== id),
           // Also remove related workers and tasks
@@ -432,9 +432,16 @@ export const useShopStore = create(
         
         console.log(`✅ Shift ${shiftToDelete.type} and related data removed from local state`);
         
-        // Save deletion to persistence layer
+        // Save deletion to persistence layer for cloud sync
         try {
-          // Mark shift as deleted
+          // Use the database delete function if available
+          if (hasValidCredentials()) {
+            dbDeleteShift(id).catch(error => {
+              console.error('Failed to delete shift from database:', error);
+            });
+          }
+          
+          // Mark shift as deleted in persistence layer
           persistenceService.saveData('shifts', { 
             ...shiftToDelete, 
             deleted_at: new Date().toISOString() 
@@ -442,6 +449,11 @@ export const useShopStore = create(
           
           // Mark related workers as deleted
           workersToRemove.forEach(worker => {
+            if (hasValidCredentials()) {
+              dbDeleteWorker(worker.id).catch(error => {
+                console.error('Failed to delete worker from database:', error);
+              });
+            }
             persistenceService.saveData('workers', { 
               ...worker, 
               deleted_at: new Date().toISOString() 
@@ -450,6 +462,11 @@ export const useShopStore = create(
           
           // Mark related tasks as deleted
           tasksToRemove.forEach(task => {
+            if (hasValidCredentials()) {
+              dbDeleteTask(task.id).catch(error => {
+                console.error('Failed to delete task from database:', error);
+              });
+            }
             persistenceService.saveData('tasks', { 
               ...task, 
               deleted_at: new Date().toISOString() 

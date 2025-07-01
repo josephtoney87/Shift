@@ -368,7 +368,7 @@ const ShiftDashboard: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white rounded-lg p-4 shadow-sm">
               {tasksByShift.map(({ shift, tasks }, index) => {
                 if (!shift?.id) return null;
                 

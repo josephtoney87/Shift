@@ -75,10 +75,17 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
   }
 
   return (
-    <header className="bg-primary-800 text-white p-4 shadow-md">
+    <header className="bg-red-800 text-white p-4 shadow-md">
       <div className="container mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-center">
-          <h1 className="text-2xl font-bold mb-4 md:mb-0">CNC Shop Shift Management</h1>
+          <div className="flex items-center mb-4 md:mb-0">
+            <img 
+              src="/OCD Logo.jpg" 
+              alt="OCD Logo" 
+              className="h-12 w-auto mr-4"
+            />
+            <h1 className="text-2xl font-bold">CNC Shop Shift Management</h1>
+          </div>
           
           <div className="flex items-center space-x-4">
             {/* Device Indicator */}
@@ -89,7 +96,7 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
             
             <Tooltip content="Select the date to view or manage tasks for that shift" position="bottom">
               <div className="relative flex items-center group">
-                <Calendar className="absolute left-3 text-primary-200" size={18} />
+                <Calendar className="absolute left-3 text-red-200" size={18} />
                 <input
                   type="date"
                   value={selectedDate}
@@ -97,8 +104,8 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
                   className={`pl-10 pr-4 py-2 rounded-md border ${
                     hasTasksForDate 
                       ? 'bg-warning-100 border-warning-300 text-warning-900' 
-                      : 'bg-primary-700 border-primary-600'
-                  } focus:outline-none focus:ring-2 focus:ring-primary-500`}
+                      : 'bg-red-700 border-red-600'
+                  } focus:outline-none focus:ring-2 focus:ring-red-500`}
                 />
               </div>
             </Tooltip>
@@ -110,9 +117,9 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
                   content="Shows the current shift and its hours. Select to change the shift view"
                   position="bottom"
                 >
-                  <div className="flex flex-col items-center bg-primary-700 p-2 rounded-md">
+                  <div className="flex flex-col items-center bg-red-700 p-2 rounded-md">
                     <span className="font-semibold">Shift {shift.type}</span>
-                    <span className="text-sm text-primary-200">
+                    <span className="text-sm text-red-200">
                       {shift.startTime} - {shift.endTime}
                     </span>
                   </div>
@@ -122,7 +129,7 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
               <Tooltip content="Add a new shift with custom hours" position="bottom">
                 <button
                   onClick={() => setShowAddShift(true)}
-                  className="p-2 bg-primary-600 rounded-md hover:bg-primary-700 transition-colors"
+                  className="p-2 bg-red-600 rounded-md hover:bg-red-700 transition-colors"
                 >
                   <Plus className="h-5 w-5" />
                 </button>
@@ -189,7 +196,7 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
                   >
                     Add Shift
                   </button>

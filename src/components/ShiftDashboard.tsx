@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, isAfter, startOfDay } from 'date-fns';
 import { 
-  Plus, CheckCircle2, ClipboardList, Calendar, ZoomIn, ZoomOut, 
-  RotateCcw, LayoutGrid, AlertTriangle
+  Plus, Calendar, ZoomIn, ZoomOut, 
+  RotateCcw, LayoutGrid
 } from 'lucide-react';
 import { useShopStore } from '../store/useShopStore';
 import { ViewMode } from '../types';
@@ -124,6 +124,20 @@ const ShiftDashboard: React.FC = () => {
 
   const carriedOverTasks = getCarriedOverTasks ? getCarriedOverTasks(selectedDate) : [];
 
+  const getDateClassName = () => {
+    const classes = ['font-medium'];
+    
+    if (carriedOverTasks.length > 0) {
+      classes.push('bg-warning-100 text-warning-800');
+    }
+    
+    if (isFutureDate) {
+      classes.push('text-primary-600');
+    }
+    
+    return classes.join(' ');
+  };
+
   const handleDateChange = (date: string) => {
     if (setSelectedDate) {
       setSelectedDate(date);
@@ -149,7 +163,7 @@ const ShiftDashboard: React.FC = () => {
     }
   };
   
-  const handleAddNote = (shiftId: string) => {
+  const handleAddTask = (shiftId: string) => {
     if (setSelectedTaskId && setTaskModalOpen) {
       setSelectedShiftId(shiftId);
       setModalMode('create');
@@ -203,7 +217,7 @@ const ShiftDashboard: React.FC = () => {
   };
   
   const statsData = [
-    { label: 'Total Notes', value: taskSummary.total || 0, color: 'bg-neutral-500' },
+    { label: 'Total Tasks', value: taskSummary.total || 0, color: 'bg-neutral-500' },
     { label: 'Completed', value: taskSummary.completed || 0, color: 'bg-success-500' },
     { label: 'In Progress', value: taskSummary.inProgress || 0, color: 'bg-primary-500' },
     { label: 'Pending', value: taskSummary.pending || 0, color: 'bg-warning-500' },
@@ -236,7 +250,7 @@ const ShiftDashboard: React.FC = () => {
         <div className="bg-white border-b border-neutral-200 px-4 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Tooltip content="Select the date to view or manage notes for that shift" position="bottom">
+              <Tooltip content="Select the date to view or manage tasks for that shift" position="bottom">
                 <button
                   onClick={() => setShowCalendarView(true)}
                   className="mr-3 p-2 hover:bg-neutral-100 rounded-md relative"
@@ -257,7 +271,7 @@ const ShiftDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="flex items-center">
-                <span className="font-medium">
+                <span className={getDateClassName()}>
                   {format(parseISO(currentDate), 'MMMM d, yyyy')}
                 </span>
                 {isFutureDate && (
@@ -315,9 +329,9 @@ const ShiftDashboard: React.FC = () => {
               </div>
               <div className="text-sm text-neutral-600">
                 {taskSummary.total === 0 ? (
-                  isFutureDate ? 'Plan notes for this date' : 'No notes scheduled for this date'
+                  isFutureDate ? 'Plan tasks for this date' : 'No tasks scheduled for this date'
                 ) : (
-                  `${taskSummary.completed || 0} of ${taskSummary.total || 0} notes completed`
+                  `${taskSummary.completed || 0} of ${taskSummary.total || 0} tasks completed`
                 )}
               </div>
             </div>
@@ -333,11 +347,11 @@ const ShiftDashboard: React.FC = () => {
               return (
                 <Tooltip 
                   key={shift.id}
-                  content="Create a new note for this shift with description, checklists, and assigned workers"
+                  content="Create a new task for this shift with description, notes, priority, and assigned workers"
                   position="bottom"
                 >
                   <button
-                    onClick={() => handleAddNote(shift.id)}
+                    onClick={() => handleAddTask(shift.id)}
                     className={`px-4 py-2 rounded-md flex items-center text-white ${
                       shift.type === 'S1' ? 'bg-primary-600 hover:bg-primary-700' :
                       shift.type === 'S2' ? 'bg-secondary-600 hover:bg-secondary-700' :
@@ -345,7 +359,7 @@ const ShiftDashboard: React.FC = () => {
                     }`}
                   >
                     <Plus className="h-5 w-5 mr-2" />
-                    Add Notes to Shift {shift.type}
+                    Add Task to Shift {shift.type}
                   </button>
                 </Tooltip>
               );
@@ -368,14 +382,14 @@ const ShiftDashboard: React.FC = () => {
                 <Calendar className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-neutral-700 mb-2">
                   {isFutureDate ? 'Plan Ahead' : 
-                   viewMode === ViewMode.MY_VIEW ? 'No Personal Notes' : 'No Notes Scheduled'}
+                   viewMode === ViewMode.MY_VIEW ? 'No Personal Tasks' : 'No Tasks Scheduled'}
                 </h3>
                 <p className="text-neutral-500 max-w-md">
                   {isFutureDate
-                    ? `Schedule notes for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Notes" buttons above to get started. All data syncs automatically across devices.`
+                    ? `Schedule tasks for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Task" buttons above to get started. All data syncs automatically across devices.`
                     : viewMode === ViewMode.MY_VIEW
-                    ? `You have no notes scheduled for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Notes" buttons above to create a note, or switch to "All Data" view to see notes from other users.`
-                    : `There are no notes scheduled for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Notes" buttons above to schedule a note for this date. Changes sync automatically across all devices.`
+                    ? `You have no tasks scheduled for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Task" buttons above to create a task, or switch to "All Data" view to see tasks from other users.`
+                    : `There are no tasks scheduled for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Task" buttons above to schedule a task for this date. Changes sync automatically across all devices.`
                   }
                 </p>
               </div>
@@ -391,7 +405,7 @@ const ShiftDashboard: React.FC = () => {
                     shift={shift}
                     tasks={tasks}
                     onTaskClick={handleTaskClick}
-                    onAddTask={handleAddNote}
+                    onAddTask={handleAddTask}
                     onMoveBack={index > 0 ? 
                       (taskId) => handleTaskMove(taskId, shift.id, 'back') : 
                       undefined
@@ -466,7 +480,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
           <div className="bg-white rounded-lg p-6 max-w-md mx-4">
             <h2 className="text-xl font-semibold text-red-600 mb-4">Something went wrong</h2>
             <p className="text-gray-600 mb-4">
-              The note modal encountered an error. Please try refreshing the page.
+              The task modal encountered an error. Please try refreshing the page.
             </p>
             <button
               onClick={() => this.setState({ hasError: false })}

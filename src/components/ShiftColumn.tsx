@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, ChevronUp, Clock, CheckCircle2, ClipboardList, Trash2, AlertTriangle, Check } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, Trash2 } from 'lucide-react';
 import { Shift, Task, Part, Worker } from '../types';
 import TaskCard from './TaskCard';
 import { useShopStore } from '../store/useShopStore';
@@ -23,31 +23,17 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
   onMoveForward
 }) => {
   const [isCollapsed, setIsCollapsed] = React.useState(false);
-  const [activeTab, setActiveTab] = useState<'tasks'>('tasks');
-  const { 
-    deleteTask, 
-    selectedDate
-  } = useShopStore();
-
-  const handleTabChange = (tab: 'tasks') => {
-    setActiveTab(tab);
-    setIsCollapsed(false);
-  };
+  const { deleteTask } = useShopStore();
 
   const handleClearAll = () => {
-    if (window.confirm('Are you sure you want to clear all notes in this shift? This action cannot be undone.')) {
+    if (window.confirm('Are you sure you want to clear all tasks in this shift? This action cannot be undone.')) {
       tasks.forEach(task => deleteTask(task.id));
     }
   };
   
   return (
     <div className="flex flex-col h-full bg-neutral-100 rounded-lg shadow-sm">
-      <div className={`${
-        shift.type === 'S1' ? 'bg-primary-700' :
-        shift.type === 'S2' ? 'bg-secondary-700' :
-        'bg-neutral-700'
-      } text-white p-3 rounded-t-lg relative`}>
-        
+      <div className={`bg-primary-700 text-white p-3 rounded-t-lg relative`}>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center">
             <h3 className="font-semibold">Shift {shift.type}</h3>
@@ -58,7 +44,7 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-sm">
-              {tasks.length} {tasks.length === 1 ? 'Note' : 'Notes'}
+              {tasks.length} {tasks.length === 1 ? 'Task' : 'Tasks'}
             </span>
             <button 
               onClick={() => setIsCollapsed(!isCollapsed)}
@@ -68,56 +54,40 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
             </button>
           </div>
         </div>
-
-        {/* Tab Navigation */}
-        <div className="flex space-x-2 mt-2">
-          <button
-            onClick={() => handleTabChange('tasks')}
-            className={`px-3 py-1.5 rounded text-sm flex items-center ${
-              activeTab === 'tasks' 
-                ? 'bg-white text-neutral-800' 
-                : 'bg-white/20 hover:bg-white/30'
-            }`}
-          >
-            Notes
-          </button>
-        </div>
       </div>
       
       {!isCollapsed && (
         <div className="flex-grow p-3 overflow-y-auto">
-          {activeTab === 'tasks' && (
-            <div className="space-y-3">
-              {tasks.length > 0 ? (
-                <>
-                  <div className="flex justify-end">
-                    <button
-                      onClick={handleClearAll}
-                      className="flex items-center px-3 py-1.5 text-sm text-error-600 hover:bg-error-50 rounded-md transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Clear All
-                    </button>
-                  </div>
-                  <div className="space-y-3">
-                    {tasks.map((task) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        onClick={() => onTaskClick(task.id)}
-                        onMoveBack={onMoveBack ? () => onMoveBack(task.id) : undefined}
-                        onMoveForward={onMoveForward ? () => onMoveForward(task.id) : undefined}
-                      />
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="flex items-center justify-center h-full text-neutral-400 text-center p-4">
-                  <p>No notes for this shift</p>
+          <div className="space-y-3">
+            {tasks.length > 0 ? (
+              <>
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleClearAll}
+                    className="flex items-center px-3 py-1.5 text-sm text-error-600 hover:bg-error-50 rounded-md transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Clear All
+                  </button>
                 </div>
-              )}
-            </div>
-          )}
+                <div className="space-y-3">
+                  {tasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      onClick={() => onTaskClick(task.id)}
+                      onMoveBack={onMoveBack ? () => onMoveBack(task.id) : undefined}
+                      onMoveForward={onMoveForward ? () => onMoveForward(task.id) : undefined}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-full text-neutral-400 text-center p-4">
+                <p>No tasks for this shift</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

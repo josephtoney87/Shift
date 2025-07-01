@@ -1,6 +1,6 @@
 import React from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay } from 'date-fns';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useShopStore } from '../store/useShopStore';
 import { ViewMode } from '../types';
 
@@ -13,9 +13,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onDateSelect, onClose }) =>
   const { 
     tasks, 
     selectedDate, 
-    shifts, 
-    isStartChecklistComplete, 
-    isEndCleanupComplete,
     currentUser,
     viewMode
   } = useShopStore();
@@ -29,7 +26,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onDateSelect, onClose }) =>
   const getTasksForDate = (dateStr: string) => {
     let dateTasks = tasks.filter(task => task.createdAt.startsWith(dateStr));
     
-    // CRITICAL: Filter by user in MY_VIEW mode
+    // Filter by user in MY_VIEW mode
     if (viewMode === ViewMode.MY_VIEW && currentUser) {
       dateTasks = dateTasks.filter(task => task.createdBy === currentUser.id);
     }
@@ -53,37 +50,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onDateSelect, onClose }) =>
     
     return acc;
   }, {} as Record<string, number>);
-
-  // CRITICAL: Get checklist status - only show warnings for dates with tasks that have incomplete checklists
-  const getChecklistStatus = (dateStr: string) => {
-    const dateTasks = getTasksForDate(dateStr);
-    
-    // If no tasks for this date (considering view mode), NO warnings
-    if (dateTasks.length === 0) {
-      return {
-        hasIncompleteChecklists: false,
-        incompleteShiftsCount: 0
-      };
-    }
-
-    // Get shifts that actually have tasks for this date
-    const shiftsWithTasks = shifts.filter(shift => {
-      const shiftTasks = dateTasks.filter(task => task.shiftId === shift.id);
-      return shiftTasks.length > 0; // Only consider shifts with actual tasks
-    });
-
-    // CRITICAL: Only show warnings if shifts with tasks have incomplete checklists
-    const shiftsWithIncompleteChecklists = shiftsWithTasks.filter(shift => {
-      const startComplete = isStartChecklistComplete(shift.id, dateStr);
-      const endComplete = isEndCleanupComplete(shift.id, dateStr);
-      return !startComplete || !endComplete;
-    });
-    
-    return {
-      hasIncompleteChecklists: shiftsWithIncompleteChecklists.length > 0,
-      incompleteShiftsCount: shiftsWithIncompleteChecklists.length
-    };
-  };
 
   const handlePreviousMonth = () => {
     setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1));
@@ -172,7 +138,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onDateSelect, onClose }) =>
               const dateStr = format(date, 'yyyy-MM-dd');
               const taskCount = tasksByDate[dateStr] || 0;
               const isSelected = isSameDay(date, new Date(selectedDate));
-              const checklistStatus = getChecklistStatus(dateStr);
 
               return (
                 <button
@@ -189,27 +154,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onDateSelect, onClose }) =>
                     {format(date, 'd')}
                   </div>
                   
-                  {/* CRITICAL: Only show warning if there are actual tasks with incomplete checklists */}
-                  {checklistStatus.hasIncompleteChecklists && (
-                    <div className="absolute top-2 left-2">
-                      <AlertTriangle className="h-4 w-4 text-error-600" />
-                    </div>
-                  )}
-                  
                   {/* Task Count - Only show if there are tasks for this user/view */}
                   {taskCount > 0 && (
                     <div className="absolute bottom-2 left-2 right-2">
                       <div className="bg-warning-100 text-warning-800 text-xs px-2 py-1 rounded-full">
                         {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Checklist Status - Only show if there are tasks with incomplete checklists */}
-                  {checklistStatus.hasIncompleteChecklists && (
-                    <div className="absolute bottom-8 left-2 right-2">
-                      <div className="bg-error-100 text-error-800 text-xs px-2 py-1 rounded-full">
-                        {checklistStatus.incompleteShiftsCount} incomplete checklist{checklistStatus.incompleteShiftsCount !== 1 ? 's' : ''}
                       </div>
                     </div>
                   )}
@@ -234,10 +183,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onDateSelect, onClose }) =>
               <span>Days with scheduled tasks</span>
             </div>
             <div className="flex items-center">
-              <AlertTriangle className="h-4 w-4 text-error-600 mr-2" />
-              <span>Days with incomplete checklists</span>
-            </div>
-            <div className="flex items-center">
               <div className="w-4 h-4 bg-primary-100 border border-primary-300 rounded mr-2"></div>
               <span>Selected date</span>
             </div>
@@ -245,13 +190,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onDateSelect, onClose }) =>
           
           {viewMode === ViewMode.MY_VIEW && currentUser && (
             <div className="mt-3 p-2 bg-blue-50 rounded border text-sm text-blue-700">
-              <strong>My View:</strong> Only showing your tasks and warnings. Other users' tasks are hidden.
+              <strong>My View:</strong> Only showing your tasks. Other users' tasks are hidden.
             </div>
           )}
           
           {viewMode === ViewMode.ALL_DATA && (
             <div className="mt-3 p-2 bg-green-50 rounded border text-sm text-green-700">
-              <strong>All Data:</strong> Showing tasks and warnings from all users.
+              <strong>All Data:</strong> Showing tasks from all users.
             </div>
           )}
         </div>

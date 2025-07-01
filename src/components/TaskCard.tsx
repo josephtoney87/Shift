@@ -30,25 +30,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
 }) => {
   const { startTaskTimer, stopTaskTimer, updateTaskStatus } = useShopStore();
 
-  const priorityConfig = {
-    [TaskPriority.LOW]: { 
-      color: 'bg-neutral-100 text-neutral-700', 
-      icon: <Tag className="h-4 w-4" /> 
-    },
-    [TaskPriority.MEDIUM]: { 
-      color: 'bg-secondary-100 text-secondary-700', 
-      icon: <Tag className="h-4 w-4" /> 
-    },
-    [TaskPriority.HIGH]: { 
-      color: 'bg-warning-100 text-warning-700', 
-      icon: <AlertTriangle className="h-4 w-4" /> 
-    },
-    [TaskPriority.URGENT]: { 
-      color: 'bg-error-100 text-error-700', 
-      icon: <AlertCircle className="h-4 w-4" /> 
-    }
-  };
-
   const statusConfig = {
     [TaskStatus.PENDING]: { 
       color: 'bg-neutral-100 text-neutral-700 border-neutral-300', 
@@ -122,18 +103,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
               {task.part.partNumber}
             </div>
           </div>
-          <div className={`text-xs font-medium ${priorityConfig[task.priority].color} py-1 px-2 rounded flex items-center`}>
-            {priorityConfig[task.priority].icon}
-            <span className="ml-1">{task.priority}</span>
-          </div>
         </div>
         
-        <p className="text-neutral-600 text-sm mb-3">{task.description}</p>
+        <p className="text-neutral-600 text-sm mb-3 line-clamp-3">{task.description}</p>
         
         <div className="flex items-center justify-between text-sm text-neutral-500 mb-4">
           <div className="flex items-center">
             <Clock className="h-4 w-4 mr-1" />
-            <span>Est: {task.estimatedDuration} min</span>
+            <span>Notes</span>
           </div>
           
           {task.activeTimeLog && (
@@ -192,7 +169,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
               )}
 
               {task.status === TaskStatus.COMPLETED && (
-                <Tooltip content="Continue working on this completed task" position="top">
+                <Tooltip content="Continue working on this completed note" position="top">
                   <button
                     onClick={handleContinueTask}
                     className="p-1.5 rounded-full bg-primary-100 text-primary-600 hover:bg-primary-200 flex items-center"
@@ -205,7 +182,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
               
               {task.status !== TaskStatus.COMPLETED && task.workers.length > 0 && (
                 <Tooltip 
-                  content={task.activeTimeLog ? 'Stop time tracking for this task' : 'Start time tracking for this task'}
+                  content={task.activeTimeLog ? 'Stop time tracking for this note' : 'Start time tracking for this note'}
                   position="top"
                 >
                   <button

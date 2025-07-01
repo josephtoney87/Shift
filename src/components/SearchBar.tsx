@@ -139,7 +139,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearchResult }) => {
                       {result.displayDate}
                     </div>
                     <div className="text-sm text-neutral-600">
-                      {result.taskCount} task{result.taskCount !== 1 ? 's' : ''} scheduled
+                      {result.taskCount} note{result.taskCount !== 1 ? 's' : ''} scheduled
                     </div>
                   </div>
                 </div>

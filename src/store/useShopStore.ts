@@ -76,7 +76,7 @@ interface ShopState {
   updateShift: (id: string, updates: Partial<Shift>) => void;
   deleteShift: (id: string) => void;
   
-  // Task actions
+  // Task actions (now note actions)
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateTaskStatus: (taskId: string, status: TaskStatus) => void;
   deleteTask: (taskId: string) => void;
@@ -118,15 +118,9 @@ interface ShopState {
   getTaskNotesByTaskId: (taskId: string) => TaskNote[];
   getFilteredTasks: () => Task[];
   
-  // Checklists
+  // Checklists (simplified - no acknowledgment required)
   createStartOfShiftChecklist: (data: any) => void;
   createEndOfShiftCleanup: (data: any) => void;
-  acknowledgeStartChecklist: (shiftId: string, date: string, workerId: string) => void;
-  acknowledgeEndCleanup: (shiftId: string, date: string, workerId: string) => void;
-  isStartChecklistComplete: (shiftId: string, date: string) => boolean;
-  isEndCleanupComplete: (shiftId: string, date: string) => boolean;
-  getStartChecklistAcknowledgments: (shiftId: string, date: string) => string[];
-  getEndCleanupAcknowledgments: (shiftId: string, date: string) => string[];
   getCarriedOverTasks: (date: string) => Task[];
   
   // Print
@@ -414,7 +408,7 @@ export const useShopStore = create(
         const workersToRemove = state.workers.filter(w => w.shiftId === id);
         const tasksToRemove = state.tasks.filter(t => t.shiftId === id);
         
-        console.log(`📊 Related data: ${workersToRemove.length} workers, ${tasksToRemove.length} tasks`);
+        console.log(`📊 Related data: ${workersToRemove.length} workers, ${tasksToRemove.length} notes`);
         
         // Remove shift and all related data from local state immediately
         set((state) => ({
@@ -498,8 +492,8 @@ export const useShopStore = create(
           workOrderNumber: taskData.workOrderNumber || `WO-${Date.now()}`,
           partId: newPart.id,
           description: taskData.description,
-          estimatedDuration: taskData.estimatedDuration,
-          priority: taskData.priority,
+          estimatedDuration: 60, // Default value since we removed the field
+          priority: TaskPriority.MEDIUM, // Default value since we removed the field
           assignedWorkers: taskData.assignedWorkers || [],
           shiftId: taskData.shiftId,
           status: TaskStatus.PENDING,
@@ -748,7 +742,7 @@ export const useShopStore = create(
               partNumber: part?.partNumber || 'Unknown',
               description: task.description,
               reason: 'Insufficient time to complete',
-              progress: Math.min(totalTime / task.estimatedDuration, 1)
+              progress: Math.min(totalTime / 60, 1) // Use default 60 minutes
             };
           });
           
@@ -882,6 +876,7 @@ export const useShopStore = create(
         return tasks;
       },
       
+      // Simplified checklist functions - no acknowledgment required
       createStartOfShiftChecklist: (data) => {
         const { shiftId, date } = data;
         const key = `${shiftId}-${date}`;
@@ -928,84 +923,6 @@ export const useShopStore = create(
         });
       },
 
-      acknowledgeStartChecklist: (shiftId, date, workerId) => {
-        const key = `${shiftId}-${date}`;
-        set((state) => {
-          const current = state.startChecklistStatus[key];
-          if (!current) return state;
-          
-          const acknowledgedWorkers = [...new Set([...current.acknowledgedWorkers, workerId])];
-          
-          return {
-            ...state,
-            startChecklistStatus: {
-              ...state.startChecklistStatus,
-              [key]: {
-                ...current,
-                acknowledgedWorkers
-              }
-            }
-          };
-        });
-      },
-
-      acknowledgeEndCleanup: (shiftId, date, workerId) => {
-        const key = `${shiftId}-${date}`;
-        set((state) => {
-          const current = state.endCleanupStatus[key];
-          if (!current) return state;
-          
-          const acknowledgedWorkers = [...new Set([...current.acknowledgedWorkers, workerId])];
-          
-          return {
-            ...state,
-            endCleanupStatus: {
-              ...state.endCleanupStatus,
-              [key]: {
-                ...current,
-                acknowledgedWorkers
-              }
-            }
-          };
-        });
-      },
-
-      isStartChecklistComplete: (shiftId: string, date: string) => {
-        const key = `${shiftId}-${date}`;
-        const checklist = get().startChecklistStatus[key];
-        if (!checklist) return false;
-        
-        const shiftWorkers = get().workers.filter(w => w.shiftId === shiftId);
-        if (shiftWorkers.length === 0) return !!checklist.completedAt;
-        
-        return shiftWorkers.every(worker => 
-          checklist.acknowledgedWorkers.includes(worker.id)
-        );
-      },
-
-      isEndCleanupComplete: (shiftId: string, date: string) => {
-        const key = `${shiftId}-${date}`;
-        const cleanup = get().endCleanupStatus[key];
-        if (!cleanup) return false;
-        
-        const shiftWorkers = get().workers.filter(w => w.shiftId === shiftId);
-        if (shiftWorkers.length === 0) return !!cleanup.completedAt;
-        
-        return shiftWorkers.every(worker => 
-          cleanup.acknowledgedWorkers.includes(worker.id)
-        );
-      },
-
-      getStartChecklistAcknowledgments: (shiftId: string, date: string) => {
-        const key = `${shiftId}-${date}`;
-        return get().startChecklistStatus[key]?.acknowledgedWorkers || [];
-      },
-
-      getEndCleanupAcknowledgments: (shiftId: string, date: string) => {
-        const key = `${shiftId}-${date}`;
-        return get().endCleanupStatus[key]?.acknowledgedWorkers || [];
-      },
-
       getCarriedOverTasks: (date: string) => {
         const state = get();
         let tasks = state.tasks.filter(task => 
@@ -1031,7 +948,7 @@ export const useShopStore = create(
           <!DOCTYPE html>
           <html>
             <head>
-              <title>Task ${task.workOrderNumber}</title>
+              <title>Notes ${task.workOrderNumber}</title>
               <style>
                 body { font-family: Arial, sans-serif; padding: 20px; }
                 h1 { color: #333; }
@@ -1040,7 +957,7 @@ export const useShopStore = create(
               </style>
             </head>
             <body>
-              <h1>Task Details: ${task.workOrderNumber}</h1>
+              <h1>Notes Details: ${task.workOrderNumber}</h1>
               
               <div class="section">
                 <div class="label">Part Number:</div>
@@ -1048,23 +965,13 @@ export const useShopStore = create(
               </div>
               
               <div class="section">
-                <div class="label">Description:</div>
+                <div class="label">Notes:</div>
                 <div>${task.description}</div>
               </div>
               
               <div class="section">
                 <div class="label">Status:</div>
                 <div>${task.status}</div>
-              </div>
-              
-              <div class="section">
-                <div class="label">Priority:</div>
-                <div>${task.priority}</div>
-              </div>
-              
-              <div class="section">
-                <div class="label">Estimated Duration:</div>
-                <div>${task.estimatedDuration} minutes</div>
               </div>
               
               <div class="section">

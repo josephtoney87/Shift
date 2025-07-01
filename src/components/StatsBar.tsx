@@ -15,18 +15,18 @@ interface StatsBarProps {
 const StatsBar: React.FC<StatsBarProps> = ({ stats }) => {
   const getTooltipContent = (label: string) => {
     switch (label) {
-      case 'Total Tasks':
-        return 'Total number of tasks scheduled for the selected date';
+      case 'Total Notes':
+        return 'Total number of notes scheduled for the selected date';
       case 'Completed':
-        return 'Number of tasks finished for the selected shift';
+        return 'Number of notes finished for the selected shift';
       case 'In Progress':
-        return 'Tasks currently in progress during this shift';
+        return 'Notes currently in progress during this shift';
       case 'Pending':
-        return 'Number of tasks not started yet for the selected shift';
+        return 'Number of notes not started yet for the selected shift';
       case 'Carried Over':
-        return 'Tasks that were moved from a previous shift';
+        return 'Notes that were moved from a previous shift';
       default:
-        return `${label} tasks for the current date`;
+        return `${label} notes for the current date`;
     }
   };
 

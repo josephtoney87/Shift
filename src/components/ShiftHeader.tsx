@@ -5,6 +5,7 @@ import { useShopStore } from '../store/useShopStore';
 import { ShiftType, TaskStatus, TaskPriority } from '../types';
 import SyncStatusIndicator from './SyncStatusIndicator';
 import DeviceIndicator from './DeviceIndicator';
+import DarkModeToggle from './DarkModeToggle';
 import Tooltip from './Tooltip';
 
 interface ShiftHeaderProps {
@@ -75,7 +76,7 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
   }
 
   return (
-    <header className="bg-red-800 text-white p-4 shadow-md">
+    <header className="bg-red-800 dark:bg-red-900 text-white p-4 shadow-md transition-colors duration-200">
       <div className="container mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center mb-4 md:mb-0">
@@ -88,6 +89,9 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
           </div>
           
           <div className="flex items-center space-x-4">
+            {/* Dark Mode Toggle */}
+            <DarkModeToggle />
+            
             {/* Device Indicator */}
             <DeviceIndicator />
             
@@ -104,8 +108,8 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
                   className={`pl-10 pr-4 py-2 rounded-md border ${
                     hasTasksForDate 
                       ? 'bg-warning-100 border-warning-300 text-warning-900' 
-                      : 'bg-red-700 border-red-600'
-                  } focus:outline-none focus:ring-2 focus:ring-red-500`}
+                      : 'bg-red-700 dark:bg-red-800 border-red-600 dark:border-red-700'
+                  } focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400`}
                 />
               </div>
             </Tooltip>
@@ -117,9 +121,9 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
                   content="Shows the current shift and its hours. Select to change the shift view"
                   position="bottom"
                 >
-                  <div className="flex flex-col items-center bg-red-700 p-2 rounded-md">
+                  <div className="flex flex-col items-center bg-red-700 dark:bg-red-800 p-2 rounded-md">
                     <span className="font-semibold">Shift {shift.type}</span>
-                    <span className="text-sm text-red-200">
+                    <span className="text-sm text-red-200 dark:text-red-300">
                       {shift.startTime} - {shift.endTime}
                     </span>
                   </div>
@@ -129,7 +133,7 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
               <Tooltip content="Add a new shift with custom hours" position="bottom">
                 <button
                   onClick={() => setShowAddShift(true)}
-                  className="p-2 bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                  className="p-2 bg-red-600 dark:bg-red-700 rounded-md hover:bg-red-700 dark:hover:bg-red-800 transition-colors"
                 >
                   <Plus className="h-5 w-5" />
                 </button>
@@ -141,18 +145,18 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
         {/* Add Shift Modal */}
         {showAddShift && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Add New Shift</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Add New Shift</h2>
               
               <form onSubmit={handleAddShift} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Shift Type
                   </label>
                   <select
                     value={newShift.type}
                     onChange={(e) => setNewShift({ ...newShift, type: e.target.value as ShiftType })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
                   >
                     {Object.values(ShiftType).map((type) => (
                       <option key={type} value={type}>
@@ -163,26 +167,26 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Start Time
                   </label>
                   <input
                     type="time"
                     value={newShift.startTime}
                     onChange={(e) => setNewShift({ ...newShift, startTime: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     End Time
                   </label>
                   <input
                     type="time"
                     value={newShift.endTime}
                     onChange={(e) => setNewShift({ ...newShift, endTime: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
                   />
                 </div>
                 
@@ -190,13 +194,13 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
                   <button
                     type="button"
                     onClick={() => setShowAddShift(false)}
-                    className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+                    className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                    className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-800"
                   >
                     Add Shift
                   </button>

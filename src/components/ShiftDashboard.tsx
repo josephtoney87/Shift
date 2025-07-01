@@ -214,7 +214,7 @@ const ShiftDashboard: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-neutral-50 relative">
+    <div className="flex flex-col h-screen bg-neutral-50 dark:bg-gray-900 relative transition-colors duration-200">
       {/* Fixed Header */}
       <div className="flex-none">
         <ShiftHeader onDateChange={handleDateChange} />
@@ -223,6 +223,7 @@ const ShiftDashboard: React.FC = () => {
         <EnhancedOfflineNotice />
         
         <div className="bg-white border-b border-neutral-200 px-4 py-2">
+        <div className="bg-white dark:bg-gray-800 border-b border-neutral-200 dark:border-gray-700 px-4 py-2 transition-colors duration-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Tooltip content="Select the date to view or manage notes for that shift" position="bottom">
@@ -242,11 +243,11 @@ const ShiftDashboard: React.FC = () => {
         </div>
 
         {/* Date and Status Info */}
-        <div className="bg-white border-b border-neutral-200 px-4 py-2">
+        <div className="bg-white dark:bg-gray-800 border-b border-neutral-200 dark:border-gray-700 px-4 py-2 transition-colors duration-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="flex items-center">
-                <span className="font-medium">
+                <span className="font-medium text-gray-900 dark:text-gray-100">
                   {format(parseISO(currentDate), 'MMMM d, yyyy')}
                 </span>
                 {isFutureDate && (
@@ -267,42 +268,43 @@ const ShiftDashboard: React.FC = () => {
               <Tooltip content="Switch to simple view for a cleaner layout" position="bottom">
                 <button
                   onClick={() => setShowSimpleView(true)}
-                  className="p-2 bg-primary-100 text-primary-700 rounded-md hover:bg-primary-200 flex items-center"
+                  className="p-2 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 rounded-md hover:bg-primary-200 dark:hover:bg-primary-800 flex items-center transition-colors duration-200"
                 >
                   <LayoutGrid className="h-4 w-4 mr-1" />
                   Simple View
                 </button>
               </Tooltip>
               <div className="flex items-center bg-neutral-100 rounded-lg p-1">
+              <div className="flex items-center bg-neutral-100 dark:bg-gray-700 rounded-lg p-1 transition-colors duration-200">
                 <Tooltip content="Zoom out to see more content" position="bottom">
                   <button
                     onClick={() => handleZoom('out')}
-                    className="p-1.5 hover:bg-neutral-200 rounded-md"
+                    className="p-1.5 hover:bg-neutral-200 dark:hover:bg-gray-600 rounded-md transition-colors duration-200"
                     title="Zoom Out"
                   >
-                    <ZoomOut className="h-4 w-4 text-neutral-700" />
+                    <ZoomOut className="h-4 w-4 text-neutral-700 dark:text-gray-300" />
                   </button>
                 </Tooltip>
                 <Tooltip content="Reset zoom to default level" position="bottom">
                   <button
                     onClick={() => handleZoom('reset')}
-                    className="p-1.5 hover:bg-neutral-200 rounded-md mx-1"
+                    className="p-1.5 hover:bg-neutral-200 dark:hover:bg-gray-600 rounded-md mx-1 transition-colors duration-200"
                     title="Reset Zoom"
                   >
-                    <RotateCcw className="h-4 w-4 text-neutral-700" />
+                    <RotateCcw className="h-4 w-4 text-neutral-700 dark:text-gray-300" />
                   </button>
                 </Tooltip>
                 <Tooltip content="Zoom in to see more detail" position="bottom">
                   <button
                     onClick={() => handleZoom('in')}
-                    className="p-1.5 hover:bg-neutral-200 rounded-md"
+                    className="p-1.5 hover:bg-neutral-200 dark:hover:bg-gray-600 rounded-md transition-colors duration-200"
                     title="Zoom In"
                   >
-                    <ZoomIn className="h-4 w-4 text-neutral-700" />
+                    <ZoomIn className="h-4 w-4 text-neutral-700 dark:text-gray-300" />
                   </button>
                 </Tooltip>
               </div>
-              <div className="text-sm text-neutral-600">
+              <div className="text-sm text-neutral-600 dark:text-gray-400">
                 {taskSummary.total === 0 ? (
                   isFutureDate ? 'Plan notes for this date' : 'No notes scheduled for this date'
                 ) : (
@@ -314,7 +316,7 @@ const ShiftDashboard: React.FC = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="px-4 py-3 bg-white border-b border-neutral-200">
+        <div className="px-4 py-3 bg-white dark:bg-gray-800 border-b border-neutral-200 dark:border-gray-700 transition-colors duration-200">
           <div className="flex flex-wrap gap-4">
             {(shifts || []).map(shift => {
               if (!shift?.id) return null;
@@ -331,7 +333,7 @@ const ShiftDashboard: React.FC = () => {
                       shift.type === 'S1' ? 'bg-primary-600 hover:bg-primary-700' :
                       shift.type === 'S2' ? 'bg-secondary-600 hover:bg-secondary-700' :
                       'bg-neutral-600 hover:bg-neutral-700'
-                    }`}
+                    } transition-colors duration-200`}
                   >
                     <Plus className="h-5 w-5 mr-2" />
                     Add Notes to Shift {shift.type}
@@ -351,7 +353,7 @@ const ShiftDashboard: React.FC = () => {
         >
           {/* Watermark */}
           <div 
-            className="fixed inset-0 pointer-events-none z-0 bg-center bg-no-repeat opacity-5"
+            className="fixed inset-0 pointer-events-none z-0 bg-center bg-no-repeat opacity-5 dark:opacity-10"
             style={{
               backgroundImage: "url('/Updated OCD clear logo.png')",
               backgroundSize: '600px auto',
@@ -362,12 +364,13 @@ const ShiftDashboard: React.FC = () => {
           {taskSummary.total === 0 ? (
             <div className="h-full flex items-center justify-center relative z-10">
               <div className="text-center">
-                <Calendar className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-neutral-700 mb-2">
+                <Calendar className="h-12 w-12 text-neutral-400 dark:text-gray-500 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-neutral-700 dark:text-gray-300 mb-2">
                   {isFutureDate ? 'Plan Ahead' : 
                    viewMode === ViewMode.MY_VIEW ? 'No Personal Notes' : 'No Notes Scheduled'}
                 </h3>
                 <p className="text-neutral-500 max-w-md">
+                <p className="text-neutral-500 dark:text-gray-400 max-w-md">
                   {isFutureDate
                     ? `Schedule notes for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Notes" buttons above to get started. All data syncs automatically across devices.`
                     : viewMode === ViewMode.MY_VIEW
@@ -378,7 +381,7 @@ const ShiftDashboard: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white rounded-lg p-4 shadow-sm relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
               {tasksByShift.map(({ shift, tasks }, index) => {
                 if (!shift?.id) return null;
                 

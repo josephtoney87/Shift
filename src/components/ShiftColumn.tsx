@@ -41,12 +41,12 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
   };
   
   return (
-    <div className="flex flex-col h-full bg-neutral-100 rounded-lg shadow-sm">
+    <div className="flex flex-col h-full bg-neutral-100 dark:bg-gray-800 rounded-lg shadow-sm transition-colors duration-200">
       <div className={`${
         shift.type === 'S1' ? 'bg-primary-700' :
         shift.type === 'S2' ? 'bg-secondary-700' :
         'bg-neutral-700'
-      } text-white p-3 rounded-t-lg relative`}>
+      } dark:opacity-90 text-white p-3 rounded-t-lg relative transition-colors duration-200`}>
         
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center">
@@ -85,7 +85,7 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
       </div>
       
       {!isCollapsed && (
-        <div className="flex-grow p-3 overflow-y-auto">
+        <div className="flex-grow p-3 overflow-y-auto bg-white dark:bg-gray-700 transition-colors duration-200">
           {activeTab === 'tasks' && (
             <div className="space-y-3">
               {tasks.length > 0 ? (
@@ -93,7 +93,7 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
                   <div className="flex justify-end">
                     <button
                       onClick={handleClearAll}
-                      className="flex items-center px-3 py-1.5 text-sm text-error-600 hover:bg-error-50 rounded-md transition-colors"
+                      className="flex items-center px-3 py-1.5 text-sm text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 rounded-md transition-colors"
                     >
                       <Trash2 className="h-4 w-4 mr-1" />
                       Clear All
@@ -113,7 +113,7 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
                   </div>
                 </>
               ) : (
-                <div className="flex items-center justify-center h-full text-neutral-400 text-center p-4">
+                <div className="flex items-center justify-center h-full text-neutral-400 dark:text-gray-500 text-center p-4">
                   <p>No notes for this shift</p>
                 </div>
               )}

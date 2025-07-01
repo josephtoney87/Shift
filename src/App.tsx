@@ -20,7 +20,7 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-200">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 transition-colors duration-200">
       <ShiftDashboard />
     </div>
   );

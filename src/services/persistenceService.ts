@@ -155,8 +155,9 @@ class PersistenceService {
     // Always save to local storage first for immediate access
     this.saveToLocalStorage(table as string, data);
 
+    // Check both credentials and authentication before attempting cloud save
     if (!hasValidCredentials()) {
-      console.log('💾 Saved to local storage (no cloud credentials)');
+      console.log('💾 Saved to local storage only (no cloud credentials)');
       return;
     }
 
@@ -166,7 +167,12 @@ class PersistenceService {
         console.log(`☁️ Successfully saved ${table as string} data to cloud`);
         this.notifyCallbacks();
       } catch (error) {
-        console.error(`❌ Failed to save ${table as string} data to cloud:`, error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('authenticated') || errorMessage.includes('row-level security')) {
+          console.warn(`🔐 Authentication required for ${table as string} - saving locally and queuing for later sync`);
+        } else {
+          console.error(`❌ Failed to save ${table as string} data to cloud:`, error);
+        }
         this.queueOperation(table as string, data, operation);
       }
     } else {
@@ -176,6 +182,11 @@ class PersistenceService {
   }
 
   private async saveToCloud(table: string, data: any, operation: string) {
+    // Only attempt cloud save if user is authenticated
+    if (!hasValidCredentials()) {
+      throw new Error('No valid credentials for cloud save');
+    }
+
     switch (table as string) {
       case 'shifts':
         return await saveShift(data);

@@ -57,9 +57,25 @@ const getCurrentUserId = async (): Promise<string | null> => {
   }
 };
 
+// Check if user is authenticated
+const isUserAuthenticated = async (): Promise<boolean> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    return !!user;
+  } catch (error) {
+    return false;
+  }
+};
+
 // SHIFTS
 export const saveShift = async (shift: Shift): Promise<void> => {
   await handleSupabaseOperation(async () => {
+    // Check if user is authenticated before attempting to save
+    const isAuthenticated = await isUserAuthenticated();
+    if (!isAuthenticated) {
+      throw new Error('User must be authenticated to save shifts');
+    }
+
     const { error } = await supabase
       .from('shifts')
       .upsert({
@@ -67,7 +83,8 @@ export const saveShift = async (shift: Shift): Promise<void> => {
         type: shift.type as string,
         start_time: shift.startTime as string,
         end_time: shift.endTime as string,
-        updated_at: new Date().toISOString() as string
+        updated_at: new Date().toISOString() as string,
+        facility_id: null as string | null // Explicitly set to null to satisfy RLS policy
       });
     
     if (error) throw error;
@@ -106,6 +123,12 @@ export const deleteShift = async (shiftId: string): Promise<void> => {
 // WORKERS
 export const saveWorker = async (worker: Worker): Promise<void> => {
   await handleSupabaseOperation(async () => {
+    // Check if user is authenticated before attempting to save
+    const isAuthenticated = await isUserAuthenticated();
+    if (!isAuthenticated) {
+      throw new Error('User must be authenticated to save workers');
+    }
+
     const { error } = await supabase
       .from('workers')
       .upsert({
@@ -114,7 +137,8 @@ export const saveWorker = async (worker: Worker): Promise<void> => {
         role: worker.role as string,
         shift_id: (worker.shiftId || null) as string | null,
         is_manual: (worker.isManual || false) as boolean,
-        updated_at: new Date().toISOString() as string
+        updated_at: new Date().toISOString() as string,
+        facility_id: null as string | null // Explicitly set to null to satisfy RLS policy
       });
     
     if (error) throw error;
@@ -154,6 +178,12 @@ export const deleteWorker = async (workerId: string): Promise<void> => {
 // PARTS
 export const savePart = async (part: Part): Promise<void> => {
   await handleSupabaseOperation(async () => {
+    // Check if user is authenticated before attempting to save
+    const isAuthenticated = await isUserAuthenticated();
+    if (!isAuthenticated) {
+      throw new Error('User must be authenticated to save parts');
+    }
+
     const { error } = await supabase
       .from('parts')
       .upsert({
@@ -162,7 +192,8 @@ export const savePart = async (part: Part): Promise<void> => {
         revision: part.revision as string,
         material: part.material as string,
         coating: (part.coating || null) as string | null,
-        updated_at: new Date().toISOString() as string
+        updated_at: new Date().toISOString() as string,
+        facility_id: null as string | null // Explicitly set to null to satisfy RLS policy
       });
     
     if (error) throw error;
@@ -191,6 +222,12 @@ export const loadParts = async (): Promise<Part[]> => {
 // TASKS
 export const saveTask = async (task: Task): Promise<void> => {
   await handleSupabaseOperation(async () => {
+    // Check if user is authenticated before attempting to save
+    const isAuthenticated = await isUserAuthenticated();
+    if (!isAuthenticated) {
+      throw new Error('User must be authenticated to save tasks');
+    }
+
     // First ensure the part exists
     const part = await supabase
       .from('parts')
@@ -206,7 +243,8 @@ export const saveTask = async (task: Task): Promise<void> => {
           id: task.partId as string,
           part_number: task.workOrderNumber as string,
           revision: 'N/A' as string,
-          material: 'N/A' as string
+          material: 'N/A' as string,
+          facility_id: null as string | null
         });
     }
 
@@ -223,7 +261,8 @@ export const saveTask = async (task: Task): Promise<void> => {
         carried_over_from_task_id: (task.carriedOverFromTaskId || null) as string | null,
         created_by: (task.createdBy || null) as string | null,
         created_at: task.createdAt as string,
-        updated_at: task.updatedAt as string
+        updated_at: task.updatedAt as string,
+        facility_id: null as string | null // Explicitly set to null to satisfy RLS policy
       });
     
     if (error) throw error;

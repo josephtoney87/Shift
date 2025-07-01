@@ -457,7 +457,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
   // Simplified validation - only check if work order and description are filled
   const canSubmit = mode === 'create' ? 
-    (watch('workOrderNumber')?.trim() && watch('description')?.trim() && isWorkOrderValid) :
+    (watch('workOrderNumber')?.trim() && watch('description')?.trim()) :
     true;
 
   if (!isOpen) return null;
@@ -478,7 +478,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form id="task-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Work Order Number */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -829,9 +829,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   <div className="text-center text-gray-500 py-2">
                     No workers added yet
                   </div>
-                )}
+                type="submit"
+                form="task-form"
               </div>
-            </div>
+                disabled={!canSubmit}
 
             {/* Additional Notes Section */}
             {mode === 'view' && (

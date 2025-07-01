@@ -223,7 +223,6 @@ const ShiftDashboard: React.FC = () => {
         <EnhancedOfflineNotice />
         
         <div className="bg-white border-b border-neutral-200 px-4 py-2">
-        <div className="bg-white dark:bg-gray-800 border-b border-neutral-200 dark:border-gray-700 px-4 py-2 transition-colors duration-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Tooltip content="Select the date to view or manage notes for that shift" position="bottom">
@@ -274,7 +273,6 @@ const ShiftDashboard: React.FC = () => {
                   Simple View
                 </button>
               </Tooltip>
-              <div className="flex items-center bg-neutral-100 rounded-lg p-1">
               <div className="flex items-center bg-neutral-100 dark:bg-gray-700 rounded-lg p-1 transition-colors duration-200">
                 <Tooltip content="Zoom out to see more content" position="bottom">
                   <button
@@ -369,7 +367,6 @@ const ShiftDashboard: React.FC = () => {
                   {isFutureDate ? 'Plan Ahead' : 
                    viewMode === ViewMode.MY_VIEW ? 'No Personal Notes' : 'No Notes Scheduled'}
                 </h3>
-                <p className="text-neutral-500 max-w-md">
                 <p className="text-neutral-500 dark:text-gray-400 max-w-md">
                   {isFutureDate
                     ? `Schedule notes for ${format(parseISO(currentDate), 'MMMM d, yyyy')}. Click one of the "Add Notes" buttons above to get started. All data syncs automatically across devices.`

@@ -1,33 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Clock, AlertTriangle, User, Package } from 'lucide-react';
-import { Task, Worker, Part } from '../types';
+import { Task } from '../types';
+import { useShopStore } from '../store/useShopStore';
 
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (task: Partial<Task>) => void;
-  task?: Task | null;
-  workers: Worker[];
-  parts: Part[];
+  taskId?: string | null;
   shiftId?: string;
 }
 
 export default function TaskModal({
   isOpen,
   onClose,
-  onSave,
-  task,
-  workers = [],
-  parts = [],
+  taskId,
   shiftId
 }: TaskModalProps) {
+  const { 
+    tasks, 
+    workers, 
+    parts, 
+    addTask, 
+    updateTask, 
+    currentUser 
+  } = useShopStore();
+  
+  const task = taskId ? tasks.find(t => t.id === taskId) : null;
+  
   const [formData, setFormData] = useState({
     description: '',
-    estimated_duration: 60,
+    estimatedDuration: 60,
     priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
-    part_id: '',
+    partId: '',
     status: 'pending' as 'pending' | 'in_progress' | 'completed',
-    shift_id: shiftId || ''
+    shiftId: shiftId || ''
   });
 
   const [assignedWorkers, setAssignedWorkers] = useState<string[]>([]);
@@ -37,37 +43,56 @@ export default function TaskModal({
     if (task) {
       setFormData({
         description: task.description || '',
-        estimated_duration: task.estimated_duration || 60,
+        estimatedDuration: task.estimatedDuration || 60,
         priority: task.priority || 'medium',
-        part_id: task.part_id || '',
+        partId: task.partId || '',
         status: task.status || 'pending',
-        shift_id: task.shift_id || shiftId || ''
+        shiftId: task.shiftId || shiftId || ''
       });
       setAssignedWorkers([]);
       setNotes('');
     } else {
       setFormData({
         description: '',
-        estimated_duration: 60,
+        estimatedDuration: 60,
         priority: 'medium',
-        part_id: '',
+        partId: '',
         status: 'pending',
-        shift_id: shiftId || ''
+        shiftId: shiftId || ''
       });
       setAssignedWorkers([]);
       setNotes('');
     }
-  }, [task, shiftId]);
+  }, [task, shiftId, taskId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const taskData = {
-      ...formData,
-      id: task?.id
-    };
-
-    onSave(taskData);
+    if (task && taskId) {
+      // Update existing task
+      updateTask(taskId, {
+        description: formData.description,
+        estimatedDuration: formData.estimatedDuration,
+        priority: formData.priority,
+        partId: formData.partId,
+        status: formData.status,
+        shiftId: formData.shiftId
+      });
+    } else {
+      // Create new task
+      addTask({
+        workOrderNumber: `WO-${Date.now()}`,
+        description: formData.description,
+        estimatedDuration: formData.estimatedDuration,
+        priority: formData.priority,
+        partId: formData.partId,
+        status: formData.status,
+        shiftId: formData.shiftId,
+        assignedWorkers: assignedWorkers,
+        createdBy: currentUser?.id || 'unknown'
+      });
+    }
+    
     onClose();
   };
 
@@ -79,7 +104,7 @@ export default function TaskModal({
     );
   };
 
-  const canSubmit = formData.description.trim().length > 0 && formData.estimated_duration > 0;
+  const canSubmit = formData.description.trim().length > 0 && formData.estimatedDuration > 0;
 
   const priorityColors = {
     low: 'bg-green-100 text-green-800 border-green-200',
@@ -137,14 +162,14 @@ export default function TaskModal({
                 Associated Part
               </label>
               <select
-                value={formData.part_id}
-                onChange={(e) => setFormData(prev => ({ ...prev, part_id: e.target.value }))}
+                value={formData.partId}
+                onChange={(e) => setFormData(prev => ({ ...prev, partId: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Select a part (optional)</option>
                 {parts.map(part => (
                   <option key={part.id} value={part.id}>
-                    {part.part_number} - Rev {part.revision} ({part.material})
+                    {part.partNumber} - Rev {part.revision} ({part.material})
                   </option>
                 ))}
               </select>
@@ -179,15 +204,15 @@ export default function TaskModal({
                 </label>
                 <input
                   type="number"
-                  value={formData.estimated_duration}
-                  onChange={(e) => setFormData(prev => ({ ...prev, estimated_duration: parseInt(e.target.value) || 0 }))}
+                  value={formData.estimatedDuration}
+                  onChange={(e) => setFormData(prev => ({ ...prev, estimatedDuration: parseInt(e.target.value) || 0 }))}
                   min="1"
                   step="15"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  {Math.floor(formData.estimated_duration / 60)}h {formData.estimated_duration % 60}m
+                  {Math.floor(formData.estimatedDuration / 60)}h {formData.estimatedDuration % 60}m
                 </p>
               </div>
             </div>

@@ -64,6 +64,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const [noteText, setNoteText] = useState('');
   const [isWorkOrderValid, setIsWorkOrderValid] = useState(false);
   const [existingTask, setExistingTask] = useState<any>(null);
+  const [checklistsSaved, setChecklistsSaved] = useState(false);
   
   // Checklist state
   const [startChecklistData, setStartChecklistData] = useState({
@@ -177,33 +178,40 @@ const TaskModal: React.FC<TaskModalProps> = ({
     const currentShiftId = task?.shiftId || shiftId;
     if (!currentShiftId) return;
 
-    // Save start checklist
-    const toolsRequiringAttention = startChecklistData.toolsRequiringAttention
-      .split(',')
-      .map(tool => tool.trim())
-      .filter(Boolean);
-      
-    const immediateAttentionTools = startChecklistData.immediateAttentionTools
-      .split(',')
-      .map(tool => tool.trim())
-      .filter(Boolean);
+    try {
+      // Save start checklist
+      const toolsRequiringAttention = startChecklistData.toolsRequiringAttention
+        .split(',')
+        .map(tool => tool.trim())
+        .filter(Boolean);
+        
+      const immediateAttentionTools = startChecklistData.immediateAttentionTools
+        .split(',')
+        .map(tool => tool.trim())
+        .filter(Boolean);
 
-    createStartOfShiftChecklist({
-      ...startChecklistData,
-      toolsRequiringAttention,
-      immediateAttentionTools,
-      shiftId: currentShiftId,
-      date: selectedDate,
-      modifiedBy: currentUser?.name || 'Unknown User'
-    });
+      createStartOfShiftChecklist({
+        ...startChecklistData,
+        toolsRequiringAttention,
+        immediateAttentionTools,
+        shiftId: currentShiftId,
+        date: selectedDate,
+        modifiedBy: currentUser?.name || 'Unknown User'
+      });
 
-    // Save end cleanup
-    createEndOfShiftCleanup({
-      ...endCleanupData,
-      shiftId: currentShiftId,
-      date: selectedDate,
-      modifiedBy: currentUser?.name || 'Unknown User'
-    });
+      // Save end cleanup
+      createEndOfShiftCleanup({
+        ...endCleanupData,
+        shiftId: currentShiftId,
+        date: selectedDate,
+        modifiedBy: currentUser?.name || 'Unknown User'
+      });
+
+      setChecklistsSaved(true);
+      console.log('✅ Checklists saved successfully');
+    } catch (error) {
+      console.error('❌ Failed to save checklists:', error);
+    }
   };
 
   useEffect(() => {
@@ -260,47 +268,69 @@ const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   const onSubmit = (data: TaskFormData) => {
+    console.log('📝 Form submission started with data:', data);
+    
     if (mode === 'create' && !isWorkOrderValid) {
       alert('Please enter a valid work order number that is not already in use.');
       return;
     }
     
     if (mode === 'create' && shiftId) {
-      // Save checklists first
-      handleSaveChecklists();
-      
-      const newTask = addTask({
-        workOrderNumber: data.workOrderNumber,
-        description: data.description,
-        estimatedDuration: 60,
-        priority: TaskPriority.MEDIUM,
-        assignedWorkers: data.assignedWorkers || [],
-        shiftId,
-        createdAt: selectedDate
-      });
-      
-      onClose();
+      try {
+        console.log('💾 Creating new task...');
+        
+        // Save checklists first if in create mode
+        if (!existingStartChecklist || !existingEndCleanup) {
+          console.log('📋 Saving checklists...');
+          handleSaveChecklists();
+        }
+        
+        // Create the task
+        const newTask = addTask({
+          workOrderNumber: data.workOrderNumber,
+          description: data.description,
+          estimatedDuration: 60,
+          priority: TaskPriority.MEDIUM,
+          assignedWorkers: data.assignedWorkers || [],
+          shiftId,
+          createdAt: selectedDate
+        });
+        
+        console.log('✅ Task created successfully:', newTask.id);
+        onClose();
+      } catch (error) {
+        console.error('❌ Failed to create task:', error);
+        alert('Failed to create task. Please try again.');
+      }
     } else if (mode === 'edit' && task) {
-      if (data.status !== task.status) {
-        updateTaskStatus(task.id, data.status);
-      }
-      
-      const currentWorkers = new Set(task.assignedWorkers);
-      const newWorkers = new Set(data.assignedWorkers);
-      
-      for (const workerId of newWorkers) {
-        if (!currentWorkers.has(workerId)) {
-          assignWorkerToTask(task.id, workerId);
+      try {
+        console.log('📝 Updating existing task...');
+        
+        if (data.status !== task.status) {
+          updateTaskStatus(task.id, data.status);
         }
-      }
-      
-      for (const workerId of currentWorkers) {
-        if (!newWorkers.has(workerId)) {
-          removeWorkerFromTask(task.id, workerId);
+        
+        const currentWorkers = new Set(task.assignedWorkers);
+        const newWorkers = new Set(data.assignedWorkers);
+        
+        for (const workerId of newWorkers) {
+          if (!currentWorkers.has(workerId)) {
+            assignWorkerToTask(task.id, workerId);
+          }
         }
+        
+        for (const workerId of currentWorkers) {
+          if (!newWorkers.has(workerId)) {
+            removeWorkerFromTask(task.id, workerId);
+          }
+        }
+        
+        console.log('✅ Task updated successfully');
+        onClose();
+      } catch (error) {
+        console.error('❌ Failed to update task:', error);
+        alert('Failed to update task. Please try again.');
       }
-      
-      onClose();
     }
   };
 
@@ -425,13 +455,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
   // Check if this is a Shift 3 task
   const isShift3Task = task && shifts.find(s => s.id === task.shiftId)?.type === 'S3';
 
-  // Check if all required fields and safety checks are complete
-  const allStartFieldsComplete = startChecklistData.workOrderNumber && startChecklistData.palletNumber && 
-    startChecklistData.partNumber && startChecklistData.programNumber && startChecklistData.startingBlockNumber && 
-    startChecklistData.toolNumber;
-  const allStartSafetyChecksComplete = Object.values(startChecklistData.safetyChecks).every(Boolean);
-  const allEndPreparationChecksComplete = Object.values(endCleanupData.preparationChecks).every(Boolean);
-  const allEndCleaningChecksComplete = Object.values(endCleanupData.cleaningChecks).every(Boolean);
+  // Simplified validation - only check if work order and description are filled
+  const canSubmit = mode === 'create' ? 
+    (watch('workOrderNumber')?.trim() && watch('description')?.trim() && isWorkOrderValid) :
+    true;
 
   if (!isOpen) return null;
 
@@ -491,7 +518,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
             {/* Checklists Section - Only show in create mode */}
             {mode === 'create' && (
               <div className="space-y-8 border-t border-gray-200 pt-6">
-                <h3 className="text-lg font-semibold text-gray-800">Checklists</h3>
+                <h3 className="text-lg font-semibold text-gray-800">Checklists (Optional)</h3>
+                <p className="text-sm text-gray-600">Complete these checklists to ensure proper shift procedures. You can skip these and add them later if needed.</p>
                 
                 {/* Start of Shift Checklist */}
                 <div className="border border-gray-200 rounded-lg p-4">
@@ -932,7 +960,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <button
                   onClick={handleSubmit(onSubmit)}
                   className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
-                  disabled={mode === 'create' && (!isWorkOrderValid || !allStartFieldsComplete || !allStartSafetyChecksComplete || !allEndPreparationChecksComplete || !allEndCleaningChecksComplete)}
+                  disabled={!canSubmit}
                 >
                   {mode === 'create' ? 'Create Notes' : 'Save Changes'}
                 </button>

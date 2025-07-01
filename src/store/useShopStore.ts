@@ -596,25 +596,25 @@ export const useShopStore = create(
         const currentDate = parseISO(task.createdAt);
         const nextDay = addDays(currentDate, 1);
         
+        // Create a new task for the next day instead of modifying the existing one
+        const newTask: Task = {
+          ...task,
+          id: uuidv4(), // New ID for the duplicated task
+          shiftId: s1Shift.id,
+          status: TaskStatus.PENDING,
+          createdAt: nextDay.toISOString(),
+          updatedAt: new Date().toISOString(),
+          carriedOverFromTaskId: taskId // Mark as carried over from original task
+        };
+        
         set((state) => ({
-          tasks: state.tasks.map((t) =>
-            t.id === taskId
-              ? {
-                  ...t,
-                  shiftId: s1Shift.id,
-                  status: TaskStatus.PENDING,
-                  createdAt: nextDay.toISOString(),
-                  updatedAt: new Date().toISOString(),
-                  carriedOverFromTaskId: taskId // Mark as carried over
-                }
-              : t
-          )
+          tasks: [...state.tasks, newTask]
         }));
         
-        const updatedTask = get().tasks.find(t => t.id === taskId);
-        if (updatedTask) {
-          persistenceService.saveData('tasks', updatedTask, 'update');
-        }
+        // Save the new task
+        persistenceService.saveData('tasks', newTask, 'create');
+        
+        console.log(`📅 Task ${task.workOrderNumber} duplicated to next day (${format(nextDay, 'yyyy-MM-dd')}) in Shift S1`);
       },
       
       addManualWorker: (name, shiftId) => {

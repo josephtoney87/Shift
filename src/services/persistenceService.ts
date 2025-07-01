@@ -357,10 +357,11 @@ class PersistenceService {
     if ((failed.length as number) > 0) {
       console.log(`⚠️ ${failed.length as number} operations failed and will retry later`);
     }
-  }
+    
     if ((skippedAuth.length as number) > 0) {
       console.log(`🔐 ${skippedAuth.length as number} operations skipped due to authentication - will retry when authenticated`);
     }
+  }
 
   async loadAllData() {
     if (!hasValidCredentials()) {

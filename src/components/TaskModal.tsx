@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Check, User, Info, AlertTriangle,
-  Trash2, Printer, Plus, RefreshCw, MessageSquarePlus, CheckCircle2, ClipboardList, Calendar
+  Trash2, Printer, Plus, RefreshCw, MessageSquarePlus, CheckCircle2, ClipboardList, Calendar, ArrowRight
 } from 'lucide-react';
 import { format, formatDistanceToNow, addDays, parseISO, isValid, formatISO } from 'date-fns';
 import { Task, TaskStatus, TaskPriority, Worker, Part } from '../types';
@@ -71,6 +71,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
     createStartOfShiftChecklist,
     createEndOfShiftCleanup,
     moveTaskToNextDay,
+    moveTaskToShift,
     currentUser
   } = useShopStore();
   
@@ -297,7 +298,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
-  const handleMoveToNextDay = () => {
+  const handleMoveToNextDay = async () => {
     if (!task) {
       console.error('No task available for move operation');
       alert('Unable to move note: No task data available.');
@@ -357,6 +358,50 @@ const TaskModal: React.FC<TaskModalProps> = ({
     } catch (error) {
       console.error('Error in handleMoveToNextDay:', error);
       alert('Unable to move note: An unexpected error occurred. Please contact support.');
+    }
+  };
+
+  const handleCarryToNextShift = () => {
+    if (!task) {
+      console.error('No task available for carry operation');
+      alert('Unable to carry note: No task data available.');
+      return;
+    }
+
+    try {
+      // Find the next shift in sequence
+      const currentShiftIndex = shifts.findIndex(s => s.id === task.shiftId);
+      
+      if (currentShiftIndex === -1) {
+        console.error('Current shift not found');
+        alert('Unable to carry note: Current shift not found.');
+        return;
+      }
+
+      // Get next shift (wrap around if at end)
+      const nextShiftIndex = (currentShiftIndex + 1) % shifts.length;
+      const nextShift = shifts[nextShiftIndex];
+      
+      if (!nextShift) {
+        console.error('Next shift not found');
+        alert('Unable to carry note: Next shift not found.');
+        return;
+      }
+
+      const currentShiftName = shifts[currentShiftIndex].type;
+      const nextShiftName = nextShift.type;
+      
+      if (window.confirm(`Carry this note from Shift ${currentShiftName} to Shift ${nextShiftName} on the same day?`)) {
+        console.log(`Carrying task ${task.workOrderNumber} from Shift ${currentShiftName} to Shift ${nextShiftName}`);
+        
+        carryOverTask(task.id, nextShift.id);
+        onClose();
+        
+        console.log(`✅ Successfully carried task ${task.workOrderNumber} to next shift`);
+      }
+    } catch (error) {
+      console.error('Error in handleCarryToNextShift:', error);
+      alert('Unable to carry note: An unexpected error occurred. Please contact support.');
     }
   };
 
@@ -816,6 +861,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   </button>
                 )}
                 
+                {/* Carry to Next Shift Button */}
+                <button
+                  onClick={handleCarryToNextShift}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 flex items-center"
+                >
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  Carry to Next Shift
+                </button>
+                
                 {task?.status !== TaskStatus.COMPLETED && (
                   <>
                     <button
@@ -827,13 +881,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     >
                       <Check className="h-4 w-4 mr-2" />
                       Mark Complete
-                    </button>
-                    <button
-                      onClick={handleCarryOver}
-                      className="px-4 py-2 bg-accent-600 text-white rounded-md hover:bg-accent-700 flex items-center"
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Carry to Next Shift
                     </button>
                   </>
                 )}

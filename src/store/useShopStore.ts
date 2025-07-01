@@ -845,6 +845,19 @@ export const useShopStore = create(
         const { shiftId, date } = data;
         const key = `${shiftId}-${date}`;
         
+        // Ensure arrays are properly handled
+        const toolsRequiringAttention = typeof data.toolsRequiringAttention === 'string' 
+          ? data.toolsRequiringAttention.split(',').map(t => t.trim()).filter(Boolean)
+          : Array.isArray(data.toolsRequiringAttention) 
+            ? data.toolsRequiringAttention 
+            : [];
+            
+        const immediateAttentionTools = typeof data.immediateAttentionTools === 'string'
+          ? data.immediateAttentionTools.split(',').map(t => t.trim()).filter(Boolean)
+          : Array.isArray(data.immediateAttentionTools)
+            ? data.immediateAttentionTools
+            : [];
+        
         // Create checklist record with real-time saving
         const checklistRecord: StartOfShiftChecklist = {
           id: uuidv4(),
@@ -856,8 +869,8 @@ export const useShopStore = create(
           programNumber: data.programNumber || '',
           startingBlockNumber: data.startingBlockNumber || '',
           toolNumber: data.toolNumber || '',
-          toolsRequiringAttention: data.toolsRequiringAttention || [],
-          immediateAttentionTools: data.immediateAttentionTools || [],
+          toolsRequiringAttention,
+          immediateAttentionTools,
           notes: data.notes || '',
           safetyChecks: data.safetyChecks || {},
           completedBy: data.completedBy || data.modifiedBy || 'unknown',
@@ -884,7 +897,11 @@ export const useShopStore = create(
         }));
         
         // Save to persistence layer for real-time sync
-        saveStartChecklist(data).catch(error => {
+        saveStartChecklist({
+          ...data,
+          toolsRequiringAttention,
+          immediateAttentionTools
+        }).catch(error => {
           console.error('Failed to save start checklist:', error);
           get().markPendingChange(`start-checklist-${key}`);
         });

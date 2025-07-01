@@ -205,8 +205,19 @@ const TaskModal: React.FC<TaskModalProps> = ({
       setValue('startChecklist.programNumber', existingStartChecklist.programNumber);
       setValue('startChecklist.startingBlockNumber', existingStartChecklist.startingBlockNumber);
       setValue('startChecklist.toolNumber', existingStartChecklist.toolNumber);
-      setValue('startChecklist.toolsRequiringAttention', existingStartChecklist.toolsRequiringAttention.join(', '));
-      setValue('startChecklist.immediateAttentionTools', existingStartChecklist.immediateAttentionTools.join(', '));
+      
+      // Safe array handling for toolsRequiringAttention
+      const toolsRequiringAttention = Array.isArray(existingStartChecklist.toolsRequiringAttention) 
+        ? existingStartChecklist.toolsRequiringAttention.join(', ')
+        : existingStartChecklist.toolsRequiringAttention || '';
+      setValue('startChecklist.toolsRequiringAttention', toolsRequiringAttention);
+      
+      // Safe array handling for immediateAttentionTools
+      const immediateAttentionTools = Array.isArray(existingStartChecklist.immediateAttentionTools)
+        ? existingStartChecklist.immediateAttentionTools.join(', ')
+        : existingStartChecklist.immediateAttentionTools || '';
+      setValue('startChecklist.immediateAttentionTools', immediateAttentionTools);
+      
       setValue('startChecklist.notes', existingStartChecklist.notes);
       
       // Set safety checks

@@ -390,15 +390,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
         return;
       }
 
-      // Look up the Shift 1 record for that next day
-      const s1Shift = shifts.find(s => s.type === 'S1');
-      
-      if (!s1Shift) {
-        console.error('No Shift 1 found in available shifts');
-        alert('Unable to move note: Shift 1 not found.');
-        return;
-      }
-
       const nextDayFormatted = format(nextDate, 'MMMM d, yyyy');
       
       if (window.confirm(`Move this note to tomorrow (${nextDayFormatted}) first shift?`)) {

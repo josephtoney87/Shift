@@ -214,7 +214,7 @@ const ShiftDashboard: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-neutral-50">
+    <div className="flex flex-col h-screen bg-neutral-50 relative">
       {/* Fixed Header */}
       <div className="flex-none">
         <ShiftHeader onDateChange={handleDateChange} />
@@ -346,11 +346,21 @@ const ShiftDashboard: React.FC = () => {
       {/* Main Content - Full Width */}
       <div className="flex-1 overflow-hidden">
         <div 
-          className="h-full overflow-y-auto p-4 transition-transform duration-200"
+          className="h-full overflow-y-auto p-4 transition-transform duration-200 relative"
           style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }}
         >
+          {/* Watermark */}
+          <div 
+            className="fixed inset-0 pointer-events-none z-0 bg-center bg-no-repeat opacity-5"
+            style={{
+              backgroundImage: "url('/Updated OCD clear logo.png')",
+              backgroundSize: '600px auto',
+              backgroundPosition: 'center center'
+            }}
+          />
+          
           {taskSummary.total === 0 ? (
-            <div className="h-full flex items-center justify-center">
+            <div className="h-full flex items-center justify-center relative z-10">
               <div className="text-center">
                 <Calendar className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-neutral-700 mb-2">
@@ -368,7 +378,7 @@ const ShiftDashboard: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white rounded-lg p-4 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white rounded-lg p-4 shadow-sm relative z-10">
               {tasksByShift.map(({ shift, tasks }, index) => {
                 if (!shift?.id) return null;
                 

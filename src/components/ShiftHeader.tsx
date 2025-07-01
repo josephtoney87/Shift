@@ -80,7 +80,7 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center mb-4 md:mb-0">
             <img 
-              src="/OCD Logo.jpg" 
+              src="/Updated OCD clear logo.png" 
               alt="OCD Logo" 
               className="h-12 w-auto mr-4"
             />

@@ -25,10 +25,14 @@ export const supabase = createClient<Database>(url, key, {
 
 // Check if we have valid credentials
 export const hasValidCredentials = () => {
-  return supabaseUrl && 
-         supabaseAnonKey && 
-         supabaseUrl !== 'https://your-project.supabase.co' &&
-         supabaseAnonKey !== 'your-anon-key';
+  // For production, we'll use the hardcoded credentials as valid
+  const validUrl = supabaseUrl && supabaseUrl !== 'https://your-project.supabase.co';
+  const validKey = supabaseAnonKey && supabaseAnonKey !== 'your-anon-key';
+  
+  // If env vars are not set, use the fallback credentials as valid
+  const hasFallbackCredentials = url && key;
+  
+  return (validUrl && validKey) || hasFallbackCredentials;
 };
 
 // Initialize the connection and create demo user if needed

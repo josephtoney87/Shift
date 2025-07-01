@@ -197,7 +197,14 @@ class PersistenceService {
   private saveToLocalStorage(table: string, data: any) {
     try {
       const key = `local_${table as string}` as string;
-      const existing = JSON.parse(localStorage.getItem(key as string) || '[]') as any[];
+      let existing: any[] = [];
+      try {
+        existing = JSON.parse(localStorage.getItem(key as string) || '[]') as any[];
+      } catch (parseError) {
+        console.warn(`Failed to parse existing data for ${table}, starting fresh:`, parseError);
+        existing = [];
+      }
+      
       const updated = existing.filter((item: any) => (item.id as string) !== (data.id as string)) as any[];
       
       // Don't store soft-deleted items locally
@@ -209,8 +216,17 @@ class PersistenceService {
       }
       
       localStorage.setItem(key as string, JSON.stringify(updated as any[]) as string);
+      console.log(`💾 Successfully saved ${table} data to localStorage (${updated.length} items)`);
     } catch (error) {
-      console.error('Failed to save to local storage:', error);
+      console.error(`❌ Failed to save ${table} to local storage:`, error);
+      // If localStorage is full or corrupted, try to clear and retry
+      try {
+        localStorage.removeItem(`local_${table}`);
+        localStorage.setItem(`local_${table}`, JSON.stringify([data]));
+        console.log(`🔄 Cleared and retried saving ${table} to localStorage`);
+      } catch (retryError) {
+        console.error(`❌ Retry failed for ${table}:`, retryError);
+      }
     }
   }
 

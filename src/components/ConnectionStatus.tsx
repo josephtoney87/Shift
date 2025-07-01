@@ -11,6 +11,7 @@ const ConnectionStatus: React.FC = () => {
   const { isInitialized, loadCloudData, syncData } = useShopStore();
 
   useEffect(() => {
+    console.log('🔄 ConnectionStatus component mounted, checking connection...');
     checkConnection();
     
     // Update status when network changes
@@ -53,25 +54,31 @@ const ConnectionStatus: React.FC = () => {
   };
 
   const checkConnection = async () => {
+    console.log('🔍 Checking connection status...');
     setConnectionStatus('checking');
     
     if (!hasValidCredentials()) {
+      console.log('📱 No valid credentials found, using local mode');
       setConnectionStatus('local');
       return;
     }
 
     if (!isOnline) {
+      console.log('📶 Device is offline');
       setConnectionStatus('disconnected');
       return;
     }
 
     try {
+      console.log('☁️ Attempting to connect to Supabase...');
       const supabase = await initializeSupabase();
       if (supabase) {
+        console.log('✅ Supabase connection successful');
         updateConnectionStatus();
         // Load latest data when connected
         loadCloudData();
       } else {
+        console.log('❌ Supabase connection failed');
         setConnectionStatus('disconnected');
       }
     } catch (error) {

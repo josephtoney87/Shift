@@ -184,11 +184,21 @@ export const useShopStore = create(
         console.log('🚀 Initializing CNC Shop Management application...');
         
         try {
+          // Force check if we have valid credentials and initialize Supabase
+          if (hasValidCredentials()) {
+            console.log('✅ Valid Supabase credentials found, initializing cloud sync...');
+            await initializeSupabase();
+          } else {
+            console.warn('⚠️ No valid Supabase credentials, running in local-only mode');
+          }
+          
           // Initialize real-time subscriptions if credentials are available
           if (hasValidCredentials()) {
             await realtimeService.initialize();
             set({ realtimeConnected: true });
             console.log('📡 Real-time subscriptions initialized');
+          } else {
+            console.log('📱 Real-time subscriptions skipped (local-only mode)');
           }
           
           // Load initial data (will load from cloud if available, local otherwise)

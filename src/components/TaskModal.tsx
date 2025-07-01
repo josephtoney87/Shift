@@ -16,24 +16,6 @@ interface TaskFormData {
   description: string;
   assignedWorkers: string[];
   status: TaskStatus;
-  // Checklist data
-  startChecklist?: {
-    workOrderNumber: string;
-    palletNumber: string;
-    partNumber: string;
-    programNumber: string;
-    startingBlockNumber: string;
-    toolNumber: string;
-    toolsRequiringAttention: string;
-    immediateAttentionTools: string;
-    notes: string;
-    safetyChecks: Record<string, boolean>;
-  };
-  endCleanup?: {
-    preparationChecks: Record<string, boolean>;
-    cleaningChecks: Record<string, boolean>;
-    notes: string;
-  };
 }
 
 interface TaskModalProps {
@@ -68,10 +50,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
     printTask,
     addManualWorker,
     deleteWorker,
-    createStartOfShiftChecklist,
-    createEndOfShiftCleanup,
     moveTaskToNextDay,
-    moveTaskToShift,
     currentUser,
     startChecklists,
     endCleanups
@@ -81,6 +60,52 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const [noteText, setNoteText] = useState('');
   const [isWorkOrderValid, setIsWorkOrderValid] = useState(false);
   const [existingTask, setExistingTask] = useState<any>(null);
+  
+  // Checklist state
+  const [startChecklistData, setStartChecklistData] = useState({
+    workOrderNumber: '',
+    palletNumber: '',
+    partNumber: '',
+    programNumber: '',
+    startingBlockNumber: '',
+    toolNumber: '',
+    toolsRequiringAttention: '',
+    immediateAttentionTools: '',
+    notes: '',
+    safetyChecks: {
+      workAreaReviewed: false,
+      measurementDevicesCalibrated: false,
+      measurementDevicesClean: false,
+      ipcMeasurementUnderstood: false,
+      materialIconGreen: false,
+      previousRoutingStepsComplete: false,
+      projectManagerNotesReviewed: false,
+      workOrderNotesReviewed: false,
+      setupOverviewReviewed: false,
+      materialQuantityConfirmed: false,
+    }
+  });
+
+  const [endCleanupData, setEndCleanupData] = useState({
+    preparationChecks: {
+      wayLubeChecked: false,
+      coolantLevelChecked: false,
+      toolboxOrganized: false,
+      deburringToolsOrganized: false,
+      torqueWrenchCondition: false,
+      setupToolsStored: false,
+    },
+    cleaningChecks: {
+      dirtyRagsDisposed: false,
+      chipBarrelEmptied: false,
+      coolantDrainsCleaned: false,
+      coolantScreenCleaned: false,
+      floorMatCleaned: false,
+      toolsStored: false,
+      areaSweptMopped: false,
+    },
+    notes: ''
+  });
   
   const task = taskId ? getExpandedTask(taskId) : null;
   const taskNotes = taskId ? getTaskNotesByTaskId(taskId) : [];
@@ -99,92 +124,44 @@ const TaskModal: React.FC<TaskModalProps> = ({
       workOrderNumber: '',
       description: '',
       assignedWorkers: [],
-      status: TaskStatus.PENDING,
-      startChecklist: {
-        workOrderNumber: '',
-        palletNumber: '',
-        partNumber: '',
-        programNumber: '',
-        startingBlockNumber: '',
-        toolNumber: '',
-        toolsRequiringAttention: '',
-        immediateAttentionTools: '',
-        notes: '',
-        safetyChecks: {
-          workAreaReviewed: false,
-          measurementDevicesCalibrated: false,
-          measurementDevicesClean: false,
-          ipcMeasurementUnderstood: false,
-          materialIconGreen: false,
-          previousRoutingStepsComplete: false,
-          projectManagerNotesReviewed: false,
-          workOrderNotesReviewed: false,
-          setupOverviewReviewed: false,
-          materialQuantityConfirmed: false,
-        }
-      },
-      endCleanup: {
-        preparationChecks: {
-          wayLubeChecked: false,
-          coolantLevelChecked: false,
-          toolboxOrganized: false,
-          deburringToolsOrganized: false,
-          torqueWrenchCondition: false,
-          setupToolsStored: false,
-        },
-        cleaningChecks: {
-          dirtyRagsDisposed: false,
-          chipBarrelEmptied: false,
-          coolantDrainsCleaned: false,
-          coolantScreenCleaned: false,
-          floorMatCleaned: false,
-          toolsStored: false,
-          areaSweptMopped: false,
-        },
-        notes: ''
-      }
+      status: TaskStatus.PENDING
     }
   });
 
-  // Real-time saving for checklist changes
-  const handleChecklistChange = (section: 'startChecklist' | 'endCleanup', field: string, value: any) => {
-    setValue(`${section}.${field}` as any, value);
-    
-    // Auto-save checklist data in real-time
-    if (mode === 'create' || mode === 'edit') {
-      const currentData = watch();
-      
-      if (section === 'startChecklist' && currentData.startChecklist) {
-        const checklistData = {
-          ...currentData.startChecklist,
-          [field]: value,
-          shiftId: shiftId || task?.shiftId,
-          date: selectedDate,
-          lastModified: new Date().toISOString(),
-          modifiedBy: currentUser?.id || 'unknown'
-        };
-        
-        // Save immediately to make it visible to all team members
-        createStartOfShiftChecklist(checklistData);
-      } else if (section === 'endCleanup' && currentData.endCleanup) {
-        const cleanupData = {
-          ...currentData.endCleanup,
-          [field]: value,
-          shiftId: shiftId || task?.shiftId,
-          date: selectedDate,
-          lastModified: new Date().toISOString(),
-          modifiedBy: currentUser?.id || 'unknown'
-        };
-        
-        // Save immediately to make it visible to all team members
-        createEndOfShiftCleanup(cleanupData);
-      }
-    }
+  // Handle start checklist changes
+  const handleStartChecklistChange = (field: string, value: any) => {
+    setStartChecklistData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  // Real-time saving for notes
-  const handleNotesChange = (section: 'startChecklist' | 'endCleanup', value: string) => {
-    handleChecklistChange(section, 'notes', value);
+  const handleStartSafetyCheckChange = (checkName: string, checked: boolean) => {
+    setStartChecklistData(prev => ({
+      ...prev,
+      safetyChecks: {
+        ...prev.safetyChecks,
+        [checkName]: checked
+      }
+    }));
+  };
+
+  // Handle end cleanup changes
+  const handleEndCleanupChange = (section: 'preparationChecks' | 'cleaningChecks', checkName: string, checked: boolean) => {
+    setEndCleanupData(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [checkName]: checked
+      }
+    }));
+  };
+
+  const handleEndCleanupNotesChange = (notes: string) => {
+    setEndCleanupData(prev => ({
+      ...prev,
+      notes
+    }));
   };
 
   useEffect(() => {
@@ -199,44 +176,29 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
     // Load existing checklist data if available
     if (existingStartChecklist) {
-      setValue('startChecklist.workOrderNumber', existingStartChecklist.workOrderNumber);
-      setValue('startChecklist.palletNumber', existingStartChecklist.palletNumber);
-      setValue('startChecklist.partNumber', existingStartChecklist.partNumber);
-      setValue('startChecklist.programNumber', existingStartChecklist.programNumber);
-      setValue('startChecklist.startingBlockNumber', existingStartChecklist.startingBlockNumber);
-      setValue('startChecklist.toolNumber', existingStartChecklist.toolNumber);
-      
-      // Safe array handling for toolsRequiringAttention
-      const toolsRequiringAttention = Array.isArray(existingStartChecklist.toolsRequiringAttention) 
-        ? existingStartChecklist.toolsRequiringAttention.join(', ')
-        : existingStartChecklist.toolsRequiringAttention || '';
-      setValue('startChecklist.toolsRequiringAttention', toolsRequiringAttention);
-      
-      // Safe array handling for immediateAttentionTools
-      const immediateAttentionTools = Array.isArray(existingStartChecklist.immediateAttentionTools)
-        ? existingStartChecklist.immediateAttentionTools.join(', ')
-        : existingStartChecklist.immediateAttentionTools || '';
-      setValue('startChecklist.immediateAttentionTools', immediateAttentionTools);
-      
-      setValue('startChecklist.notes', existingStartChecklist.notes);
-      
-      // Set safety checks
-      Object.entries(existingStartChecklist.safetyChecks).forEach(([key, value]) => {
-        setValue(`startChecklist.safetyChecks.${key}` as any, value);
+      setStartChecklistData({
+        workOrderNumber: existingStartChecklist.workOrderNumber || '',
+        palletNumber: existingStartChecklist.palletNumber || '',
+        partNumber: existingStartChecklist.partNumber || '',
+        programNumber: existingStartChecklist.programNumber || '',
+        startingBlockNumber: existingStartChecklist.startingBlockNumber || '',
+        toolNumber: existingStartChecklist.toolNumber || '',
+        toolsRequiringAttention: Array.isArray(existingStartChecklist.toolsRequiringAttention) 
+          ? existingStartChecklist.toolsRequiringAttention.join(', ')
+          : existingStartChecklist.toolsRequiringAttention || '',
+        immediateAttentionTools: Array.isArray(existingStartChecklist.immediateAttentionTools)
+          ? existingStartChecklist.immediateAttentionTools.join(', ')
+          : existingStartChecklist.immediateAttentionTools || '',
+        notes: existingStartChecklist.notes || '',
+        safetyChecks: existingStartChecklist.safetyChecks || {}
       });
     }
 
     if (existingEndCleanup) {
-      setValue('endCleanup.notes', existingEndCleanup.notes);
-      
-      // Set preparation checks
-      Object.entries(existingEndCleanup.preparationChecks).forEach(([key, value]) => {
-        setValue(`endCleanup.preparationChecks.${key}` as any, value);
-      });
-      
-      // Set cleaning checks
-      Object.entries(existingEndCleanup.cleaningChecks).forEach(([key, value]) => {
-        setValue(`endCleanup.cleaningChecks.${key}` as any, value);
+      setEndCleanupData({
+        preparationChecks: existingEndCleanup.preparationChecks || {},
+        cleaningChecks: existingEndCleanup.cleaningChecks || {},
+        notes: existingEndCleanup.notes || ''
       });
     }
   }, [task, mode, reset, setValue, existingStartChecklist, existingEndCleanup]);
@@ -265,37 +227,12 @@ const TaskModal: React.FC<TaskModalProps> = ({
       const newTask = addTask({
         workOrderNumber: data.workOrderNumber,
         description: data.description,
-        estimatedDuration: 60, // Default value since we removed the field
-        priority: TaskPriority.MEDIUM, // Default value since we removed the field
+        estimatedDuration: 60,
+        priority: TaskPriority.MEDIUM,
         assignedWorkers: data.assignedWorkers || [],
         shiftId,
         createdAt: selectedDate
       });
-
-      // Save checklists if provided (they're already saved in real-time)
-      if (data.startChecklist && Object.values(data.startChecklist.safetyChecks).some(Boolean)) {
-        createStartOfShiftChecklist({
-          ...data.startChecklist,
-          toolsRequiringAttention: data.startChecklist.toolsRequiringAttention.split(',').map(t => t.trim()).filter(Boolean),
-          immediateAttentionTools: data.startChecklist.immediateAttentionTools.split(',').map(t => t.trim()).filter(Boolean),
-          shiftId,
-          date: selectedDate,
-          completedBy: currentUser?.id || 'unknown',
-          lastModified: new Date().toISOString(),
-          modifiedBy: currentUser?.id || 'unknown'
-        });
-      }
-
-      if (data.endCleanup && (Object.values(data.endCleanup.preparationChecks).some(Boolean) || Object.values(data.endCleanup.cleaningChecks).some(Boolean))) {
-        createEndOfShiftCleanup({
-          ...data.endCleanup,
-          shiftId,
-          date: selectedDate,
-          completedBy: currentUser?.id || 'unknown',
-          lastModified: new Date().toISOString(),
-          modifiedBy: currentUser?.id || 'unknown'
-        });
-      }
       
       onClose();
     } else if (mode === 'edit' && task) {
@@ -360,7 +297,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
 
     try {
-      // Guard against invalid or missing dates
       let taskDate;
       
       if (!task.createdAt) {
@@ -370,18 +306,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
         taskDate = parseISO(task.createdAt);
         
         if (!isValid(taskDate)) {
-          console.warn(
-            'Invalid createdAt value for task', 
-            task.id, 
-            'got', 
-            task.createdAt, 
-            'defaulting to current date'
-          );
+          console.warn('Invalid createdAt value for task', task.id, 'got', task.createdAt, 'defaulting to current date');
           taskDate = new Date();
         }
       }
 
-      // Calculate the next day date properly
       const nextDate = addDays(taskDate, 1);
       
       if (!isValid(nextDate)) {
@@ -414,7 +343,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
 
     try {
-      // Find the next shift in sequence
       const currentShiftIndex = shifts.findIndex(s => s.id === task.shiftId);
       
       if (currentShiftIndex === -1) {
@@ -423,7 +351,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
         return;
       }
 
-      // Get next shift (wrap around if at end)
       const nextShiftIndex = (currentShiftIndex + 1) % shifts.length;
       const nextShift = shifts[nextShiftIndex];
       
@@ -531,8 +458,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      {...register('startChecklist.workOrderNumber')}
-                      onChange={(e) => handleChecklistChange('startChecklist', 'workOrderNumber', e.target.value)}
+                      value={startChecklistData.workOrderNumber}
+                      onChange={(e) => handleStartChecklistChange('workOrderNumber', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                     />
@@ -543,8 +470,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      {...register('startChecklist.palletNumber')}
-                      onChange={(e) => handleChecklistChange('startChecklist', 'palletNumber', e.target.value)}
+                      value={startChecklistData.palletNumber}
+                      onChange={(e) => handleStartChecklistChange('palletNumber', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                     />
@@ -555,8 +482,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      {...register('startChecklist.partNumber')}
-                      onChange={(e) => handleChecklistChange('startChecklist', 'partNumber', e.target.value)}
+                      value={startChecklistData.partNumber}
+                      onChange={(e) => handleStartChecklistChange('partNumber', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                     />
@@ -567,8 +494,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      {...register('startChecklist.programNumber')}
-                      onChange={(e) => handleChecklistChange('startChecklist', 'programNumber', e.target.value)}
+                      value={startChecklistData.programNumber}
+                      onChange={(e) => handleStartChecklistChange('programNumber', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                     />
@@ -579,8 +506,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      {...register('startChecklist.startingBlockNumber')}
-                      onChange={(e) => handleChecklistChange('startChecklist', 'startingBlockNumber', e.target.value)}
+                      value={startChecklistData.startingBlockNumber}
+                      onChange={(e) => handleStartChecklistChange('startingBlockNumber', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                     />
@@ -591,8 +518,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      {...register('startChecklist.toolNumber')}
-                      onChange={(e) => handleChecklistChange('startChecklist', 'toolNumber', e.target.value)}
+                      value={startChecklistData.toolNumber}
+                      onChange={(e) => handleStartChecklistChange('toolNumber', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                     />
@@ -606,8 +533,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      {...register('startChecklist.toolsRequiringAttention')}
-                      onChange={(e) => handleChecklistChange('startChecklist', 'toolsRequiringAttention', e.target.value)}
+                      value={startChecklistData.toolsRequiringAttention}
+                      onChange={(e) => handleStartChecklistChange('toolsRequiringAttention', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                       placeholder="Tool 1, Tool 2, Tool 3"
@@ -619,8 +546,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      {...register('startChecklist.immediateAttentionTools')}
-                      onChange={(e) => handleChecklistChange('startChecklist', 'immediateAttentionTools', e.target.value)}
+                      value={startChecklistData.immediateAttentionTools}
+                      onChange={(e) => handleStartChecklistChange('immediateAttentionTools', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                       placeholder="Tool 1, Tool 2, Tool 3"
@@ -646,8 +573,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       <label key={key} className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          {...register(`startChecklist.safetyChecks.${key}` as any)}
-                          onChange={(e) => handleChecklistChange('startChecklist', `safetyChecks.${key}`, e.target.checked)}
+                          checked={startChecklistData.safetyChecks[key as keyof typeof startChecklistData.safetyChecks] || false}
+                          onChange={(e) => handleStartSafetyCheckChange(key, e.target.checked)}
                           disabled={mode === 'view'}
                           className="h-4 w-4 rounded border-gray-300"
                         />
@@ -662,8 +589,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     Checklist Notes
                   </label>
                   <textarea
-                    {...register('startChecklist.notes')}
-                    onChange={(e) => handleNotesChange('startChecklist', e.target.value)}
+                    value={startChecklistData.notes}
+                    onChange={(e) => handleStartChecklistChange('notes', e.target.value)}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     disabled={mode === 'view'}
@@ -698,8 +625,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                         <label key={key} className="flex items-center gap-2">
                           <input
                             type="checkbox"
-                            {...register(`endCleanup.preparationChecks.${key}` as any)}
-                            onChange={(e) => handleChecklistChange('endCleanup', `preparationChecks.${key}`, e.target.checked)}
+                            checked={endCleanupData.preparationChecks[key as keyof typeof endCleanupData.preparationChecks] || false}
+                            onChange={(e) => handleEndCleanupChange('preparationChecks', key, e.target.checked)}
                             disabled={mode === 'view'}
                             className="h-4 w-4 rounded border-gray-300"
                           />
@@ -724,8 +651,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                         <label key={key} className="flex items-center gap-2">
                           <input
                             type="checkbox"
-                            {...register(`endCleanup.cleaningChecks.${key}` as any)}
-                            onChange={(e) => handleChecklistChange('endCleanup', `cleaningChecks.${key}`, e.target.checked)}
+                            checked={endCleanupData.cleaningChecks[key as keyof typeof endCleanupData.cleaningChecks] || false}
+                            onChange={(e) => handleEndCleanupChange('cleaningChecks', key, e.target.checked)}
                             disabled={mode === 'view'}
                             className="h-4 w-4 rounded border-gray-300"
                           />
@@ -740,8 +667,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       Cleanup Notes
                     </label>
                     <textarea
-                      {...register('endCleanup.notes')}
-                      onChange={(e) => handleNotesChange('endCleanup', e.target.value)}
+                      value={endCleanupData.notes}
+                      onChange={(e) => handleEndCleanupNotesChange(e.target.value)}
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
@@ -926,18 +853,16 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 </button>
                 
                 {task?.status !== TaskStatus.COMPLETED && (
-                  <>
-                    <button
-                      onClick={() => {
-                        if (task) updateTaskStatus(task.id, TaskStatus.COMPLETED);
-                        onClose();
-                      }}
-                      className="px-4 py-2 bg-success-600 text-white rounded-md hover:bg-success-700 flex items-center"
-                    >
-                      <Check className="h-4 w-4 mr-2" />
-                      Mark Complete
-                    </button>
-                  </>
+                  <button
+                    onClick={() => {
+                      if (task) updateTaskStatus(task.id, TaskStatus.COMPLETED);
+                      onClose();
+                    }}
+                    className="px-4 py-2 bg-success-600 text-white rounded-md hover:bg-success-700 flex items-center"
+                  >
+                    <Check className="h-4 w-4 mr-2" />
+                    Mark Complete
+                  </button>
                 )}
               </>
             ) : (

@@ -3,12 +3,8 @@ import ShiftDashboard from './components/ShiftDashboard';
 import { useAutoSync } from './hooks/useAutoSync';
 import { syncManager } from './services/syncManager';
 import { deviceManager } from './services/deviceManager';
-import { useShopStore } from './store/useShopStore';
-import { ThemeMode } from './types';
 
 function App() {
-  const { themeMode } = useShopStore();
-  
   // Initialize auto-sync system
   useAutoSync();
 
@@ -23,20 +19,8 @@ function App() {
     };
   }, []);
 
-  const getThemeClasses = () => {
-    switch (themeMode) {
-      case ThemeMode.DARK:
-        return 'min-h-screen bg-gray-900 text-white';
-      case ThemeMode.INVERT:
-        return 'min-h-screen bg-gray-400';
-      case ThemeMode.LIGHT:
-      default:
-        return 'min-h-screen bg-gray-200';
-    }
-  };
-
   return (
-    <div className={getThemeClasses()}>
+    <div className="min-h-screen bg-gray-200">
       <ShiftDashboard />
     </div>
   );

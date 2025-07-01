@@ -91,9 +91,6 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
             {/* Device Indicator */}
             <DeviceIndicator />
             
-            {/* Theme Toggle */}
-            <ThemeToggle />
-            
             {/* Sync Status Indicator */}
             <SyncStatusIndicator />
             

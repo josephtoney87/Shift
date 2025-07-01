@@ -4,7 +4,7 @@ import { format, addDays, parseISO } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   Shift, Worker, Part, Task, TaskNote, ShiftReport, User,
-  TaskStatus, TaskPriority, WorkerRole, ShiftType, ViewMode, ThemeMode,
+  TaskStatus, TaskPriority, WorkerRole, ShiftType, ViewMode,
   StartOfShiftChecklist, EndOfShiftCleanup
 } from '../types';
 import { mockShifts, mockWorkers, mockParts, mockTasks, mockTaskNotes, mockShiftReports, mockUsers } from '../data/mockData';
@@ -43,7 +43,6 @@ interface ShopState {
   selectedDate: string;
   currentUser: User | null;
   viewMode: ViewMode;
-  themeMode: ThemeMode;
   startChecklistStatus: Record<string, ChecklistAcknowledgment>;
   endCleanupStatus: Record<string, ChecklistAcknowledgment>;
   
@@ -61,7 +60,6 @@ interface ShopState {
   setSelectedDate: (date: string) => void;
   setCurrentUser: (user: User) => void;
   setViewMode: (mode: ViewMode) => void;
-  setThemeMode: (mode: ThemeMode) => void;
   
   // Sync actions
   initializeApp: () => Promise<void>;
@@ -158,7 +156,6 @@ export const useShopStore = create(
       selectedDate: format(new Date(), 'yyyy-MM-dd'),
       currentUser: defaultUser,
       viewMode: ViewMode.MY_VIEW,
-      themeMode: ThemeMode.LIGHT,
       startChecklistStatus: {},
       endCleanupStatus: {},
       isOnline: isOnline(),
@@ -173,7 +170,6 @@ export const useShopStore = create(
       setSelectedDate: (date) => set({ selectedDate: date }),
       setCurrentUser: (user) => set({ currentUser: user }),
       setViewMode: (mode) => set({ viewMode: mode }),
-      setThemeMode: (mode) => set({ themeMode: mode }),
       
       markPendingChange: (changeId) => {
         set((state) => ({
@@ -1105,7 +1101,6 @@ export const useShopStore = create(
         users: state.users,
         currentUser: state.currentUser,
         viewMode: state.viewMode,
-        themeMode: state.themeMode,
         startChecklistStatus: state.startChecklistStatus,
         endCleanupStatus: state.endCleanupStatus,
         lastSyncTime: state.lastSyncTime,

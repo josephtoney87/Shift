@@ -46,6 +46,17 @@ const convertTaskFromDb = (dbTask: any): Task => ({
   createdBy: (dbTask.created_by || undefined) as string | undefined
 });
 
+// Get current authenticated user ID or return null
+const getCurrentUserId = async (): Promise<string | null> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.id || null;
+  } catch (error) {
+    console.warn('Could not get current user:', error);
+    return null;
+  }
+};
+
 // SHIFTS
 export const saveShift = async (shift: Shift): Promise<void> => {
   await handleSupabaseOperation(async () => {
@@ -267,6 +278,8 @@ export const deleteTask = async (taskId: string): Promise<void> => {
 // TASK NOTES
 export const saveTaskNote = async (note: TaskNote): Promise<void> => {
   await handleSupabaseOperation(async () => {
+    const currentUserId = await getCurrentUserId();
+    
     const { error } = await supabase
       .from('task_notes')
       .upsert({
@@ -274,6 +287,7 @@ export const saveTaskNote = async (note: TaskNote): Promise<void> => {
         task_id: (note.taskId || null) as string | null,
         worker_id: (note.workerId || null) as string | null,
         note_text: note.noteText as string,
+        created_by: currentUserId,
         created_at: note.timestamp as string
       });
     
@@ -303,6 +317,8 @@ export const loadTaskNotes = async (): Promise<TaskNote[]> => {
 // TIME LOGS
 export const saveTimeLog = async (timeLog: TaskTimeLog): Promise<void> => {
   await handleSupabaseOperation(async () => {
+    const currentUserId = await getCurrentUserId();
+    
     const { error } = await supabase
       .from('time_logs')
       .upsert({
@@ -311,7 +327,8 @@ export const saveTimeLog = async (timeLog: TaskTimeLog): Promise<void> => {
         worker_id: (timeLog.workerId || null) as string | null,
         start_time: timeLog.startTime as string,
         end_time: (timeLog.endTime || null) as string | null,
-        duration: (timeLog.duration || null) as number | null
+        duration: (timeLog.duration || null) as number | null,
+        created_by: currentUserId
       });
     
     if (error) throw error;
@@ -341,6 +358,15 @@ export const loadTimeLogs = async (): Promise<TaskTimeLog[]> => {
 // CHECKLISTS
 export const saveStartChecklist = async (checklist: any): Promise<void> => {
   await handleSupabaseOperation(async () => {
+    const currentUserId = await getCurrentUserId();
+    
+    // If no authenticated user, we'll need to handle this gracefully
+    if (!currentUserId) {
+      console.warn('No authenticated user found for start checklist creation');
+      // For now, we'll still try to insert with null created_by
+      // The RLS policy should be updated to allow this
+    }
+    
     const { error } = await supabase
       .from('start_checklists')
       .insert({
@@ -355,7 +381,7 @@ export const saveStartChecklist = async (checklist: any): Promise<void> => {
         immediate_attention_tools: (checklist.immediateAttentionTools || null) as string[] | null,
         notes: (checklist.notes || null) as string | null,
         safety_checks: checklist.safetyChecks as any,
-        created_by: (checklist.completedBy || null) as string | null
+        created_by: currentUserId
       });
     
     if (error) throw error;
@@ -364,6 +390,15 @@ export const saveStartChecklist = async (checklist: any): Promise<void> => {
 
 export const saveEndCleanup = async (cleanup: any): Promise<void> => {
   await handleSupabaseOperation(async () => {
+    const currentUserId = await getCurrentUserId();
+    
+    // If no authenticated user, we'll need to handle this gracefully
+    if (!currentUserId) {
+      console.warn('No authenticated user found for end cleanup creation');
+      // For now, we'll still try to insert with null created_by
+      // The RLS policy should be updated to allow this
+    }
+    
     const { error } = await supabase
       .from('end_cleanups')
       .insert({
@@ -371,7 +406,7 @@ export const saveEndCleanup = async (cleanup: any): Promise<void> => {
         preparation_checks: cleanup.preparationChecks as any,
         cleaning_checks: cleanup.cleaningChecks as any,
         notes: (cleanup.notes || null) as string | null,
-        created_by: (cleanup.completedBy || null) as string | null
+        created_by: currentUserId
       });
     
     if (error) throw error;

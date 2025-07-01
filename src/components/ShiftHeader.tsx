@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { format, isAfter, startOfDay } from 'date-fns';
-import { Calendar, Plus, AlertCircle } from 'lucide-react';
+import { Calendar, Plus, AlertCircle, Trash2, X } from 'lucide-react';
 import { useShopStore } from '../store/useShopStore';
 import { ShiftType, TaskStatus, TaskPriority } from '../types';
 import SyncStatusIndicator from './SyncStatusIndicator';
@@ -17,11 +17,13 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
     selectedDate, 
     shifts, 
     addShift,
+    deleteShift,
     getTaskSummaryForDate,
     tasks
   } = useShopStore();
   
   const [showAddShift, setShowAddShift] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [newShift, setNewShift] = useState({
     type: ShiftType.S1,
     startTime: '06:00',
@@ -39,6 +41,10 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
     setShowAddShift(false);
   };
 
+  const handleDeleteShift = (shiftId: string) => {
+    deleteShift(shiftId);
+    setShowDeleteConfirm(null);
+  };
   // Get task count for date highlighting
   const taskSummary = getTaskSummaryForDate(selectedDate);
   const hasTasksForDate = taskSummary.total > 0;
@@ -142,6 +148,49 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
           </div>
         </div>
 
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+              <div className="flex items-center mb-4">
+                <Trash2 className="h-6 w-6 text-red-600 mr-3" />
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Delete Shift</h2>
+              </div>
+              
+              <div className="mb-6">
+                <p className="text-gray-600 dark:text-gray-400 mb-2">
+                  Are you sure you want to delete this shift?
+                </p>
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
+                  <div className="flex items-center text-red-800 dark:text-red-200">
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    <span className="font-medium">Warning:</span>
+                  </div>
+                  <p className="text-red-700 dark:text-red-300 text-sm mt-1">
+                    This will also delete all workers, notes, and related data for this shift. 
+                    This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteShift(showDeleteConfirm)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Shift
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Add Shift Modal */}
         {showAddShift && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

@@ -4,7 +4,8 @@ import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   Shift, Worker, Part, Task, TaskNote, TaskTimeLog, ShiftReport, User,
-  TaskStatus, TaskPriority, WorkerRole, ShiftType, ViewMode
+  TaskStatus, TaskPriority, WorkerRole, ShiftType, ViewMode,
+  StartOfShiftChecklist, EndOfShiftCleanup
 } from '../types';
 import { mockShifts, mockWorkers, mockParts, mockTasks, mockTaskNotes, mockTaskTimeLogs, mockShiftReports, mockUsers } from '../data/mockData';
 import { persistenceService } from '../services/persistenceService';
@@ -34,6 +35,8 @@ interface ShopState {
   taskTimeLogs: TaskTimeLog[];
   shiftReports: ShiftReport[];
   users: User[];
+  startChecklists: StartOfShiftChecklist[];
+  endCleanups: EndOfShiftCleanup[];
   
   // UI State
   selectedTaskId: string | null;
@@ -89,10 +92,6 @@ interface ShopState {
   removeWorkerFromTask: (taskId: string, workerId: string) => void;
   deleteWorker: (workerId: string) => void;
   
-  // Time tracking
-  startTaskTimer: (taskId: string, workerId: string) => void;
-  stopTaskTimer: (taskId: string) => void;
-  
   // Notes
   addTaskNote: (note: Omit<TaskNote, 'id' | 'timestamp'>) => void;
   
@@ -111,9 +110,6 @@ interface ShopState {
   getExpandedTask: (taskId: string) => (Task & { 
     part: Part;
     workers: Worker[];
-    timeLogs?: TaskTimeLog[];
-    activeTimeLog?: TaskTimeLog;
-    totalDuration?: number;
   }) | null;
   getTaskNotesByTaskId: (taskId: string) => TaskNote[];
   getFilteredTasks: () => Task[];
@@ -154,6 +150,8 @@ export const useShopStore = create(
       taskTimeLogs: mockTaskTimeLogs,
       shiftReports: mockShiftReports,
       users: mockUsers,
+      startChecklists: [],
+      endCleanups: [],
       selectedTaskId: null,
       isTaskModalOpen: false,
       selectedDate: format(new Date(), 'yyyy-MM-dd'),
@@ -266,7 +264,9 @@ export const useShopStore = create(
               users: data.users && data.users.length > 0 ? data.users : mockUsers,
               workers: data.workers && data.workers.length > 0 ? data.workers : mockWorkers,
               shifts: data.shifts && data.shifts.length > 0 ? data.shifts : mockShifts,
-              parts: data.parts && data.parts.length > 0 ? data.parts : mockParts
+              parts: data.parts && data.parts.length > 0 ? data.parts : mockParts,
+              startChecklists: data.startChecklists || [],
+              endCleanups: data.endCleanups || []
             };
             
             set({
@@ -653,46 +653,6 @@ export const useShopStore = create(
         }
       },
       
-      startTaskTimer: (taskId, workerId) => {
-        const timeLogId = uuidv4();
-        const newTimeLog: TaskTimeLog = {
-          id: timeLogId,
-          taskId,
-          workerId,
-          startTime: new Date().toISOString()
-        };
-        
-        set((state) => ({
-          taskTimeLogs: [...state.taskTimeLogs, newTimeLog]
-        }));
-        
-        persistenceService.saveData('time_logs', newTimeLog, 'create');
-      },
-      
-      stopTaskTimer: (taskId) => {
-        const updatedTimeLog = get().taskTimeLogs.find(log => 
-          log.taskId === taskId && !log.endTime
-        );
-        
-        if (updatedTimeLog) {
-          const endTime = new Date().toISOString();
-          const duration = Math.round(
-            (new Date(endTime).getTime() - new Date(updatedTimeLog.startTime).getTime()) / 60000
-          );
-          
-          set((state) => ({
-            taskTimeLogs: state.taskTimeLogs.map((log) =>
-              log.id === updatedTimeLog.id
-                ? { ...log, endTime, duration }
-                : log
-            )
-          }));
-          
-          const finalTimeLog = { ...updatedTimeLog, endTime, duration };
-          persistenceService.saveData('time_logs', finalTimeLog, 'update');
-        }
-      },
-      
       addTaskNote: (note) => {
         const newNote: TaskNote = {
           id: uuidv4(),
@@ -720,18 +680,13 @@ export const useShopStore = create(
           .filter((t) => t.status === TaskStatus.COMPLETED)
           .map((task) => {
             const part = state.parts.find((p) => p.id === task.partId);
-            const completedLog = state.taskTimeLogs
-              .filter((log) => log.taskId === task.id && log.endTime)
-              .sort((a, b) => 
-                new Date(b.endTime!).getTime() - new Date(a.endTime!).getTime()
-              )[0];
               
             return {
               taskId: task.id,
               workOrderNumber: task.workOrderNumber,
               partNumber: part?.partNumber || 'Unknown',
               description: task.description,
-              completedAt: completedLog?.endTime || task.updatedAt,
+              completedAt: task.updatedAt,
               completedBy: task.assignedWorkers
             };
           });
@@ -740,9 +695,6 @@ export const useShopStore = create(
           .filter((t) => t.status !== TaskStatus.COMPLETED)
           .map((task) => {
             const part = state.parts.find((p) => p.id === task.partId);
-            const totalTime = state.taskTimeLogs
-              .filter((log) => log.taskId === task.id && log.duration)
-              .reduce((sum, log) => sum + (log.duration || 0), 0);
               
             return {
               taskId: task.id,
@@ -750,27 +702,11 @@ export const useShopStore = create(
               partNumber: part?.partNumber || 'Unknown',
               description: task.description,
               reason: 'Insufficient time to complete',
-              progress: Math.min(totalTime / 60, 1) // Use default 60 minutes
+              progress: Math.min(60 / 60, 1) // Use default 60 minutes
             };
           });
           
-        const idleEvents = state.taskTimeLogs
-          .filter((log) => {
-            const task = shiftTasks.find((t) => t.id === log.taskId);
-            return task && log.endTime;
-          })
-          .map((log) => ({
-            taskId: log.taskId,
-            workerId: log.workerId,
-            startTime: log.startTime,
-            endTime: log.endTime!,
-            duration: log.duration || 0
-          }));
-          
-        const totalTime = idleEvents.reduce((sum, event) => sum + event.duration, 0);
-        const idleTime = idleEvents
-          .filter((event) => event.duration > 30)
-          .reduce((sum, event) => sum + event.duration, 0);
+        const idleEvents: any[] = []; // No time tracking, so no idle events
           
         const handoverReport = {
           id: uuidv4(),
@@ -782,8 +718,8 @@ export const useShopStore = create(
           metrics: {
             totalCompletedTasks: completedTasks.length,
             totalCarriedOver: carriedOverTasks.length,
-            totalIdleTime: idleTime,
-            shiftUtilization: totalTime ? (totalTime - idleTime) / totalTime : 1
+            totalIdleTime: 0,
+            shiftUtilization: 1
           },
           notes: '',
           generatedBy: state.workers[0].id,
@@ -849,19 +785,11 @@ export const useShopStore = create(
         if (!part) return null;
         
         const workers = state.workers.filter((w) => task.assignedWorkers.includes(w.id));
-        const timeLogs = state.taskTimeLogs.filter((log) => log.taskId === taskId);
-        const activeTimeLog = timeLogs.find((log) => !log.endTime);
-        const totalDuration = timeLogs
-          .filter((log) => log.duration)
-          .reduce((sum, log) => sum + (log.duration || 0), 0);
           
         return {
           ...task,
           part,
-          workers,
-          timeLogs,
-          activeTimeLog,
-          totalDuration
+          workers
         };
       },
       
@@ -1045,13 +973,6 @@ export const useShopStore = create(
                 <div class="label">Assigned Workers:</div>
                 <div>${task.workers.map(w => w.name).join(', ') || 'None'}</div>
               </div>
-              
-              ${task.totalDuration ? `
-                <div class="section">
-                  <div class="label">Total Time Spent:</div>
-                  <div>${task.totalDuration} minutes</div>
-                </div>
-              ` : ''}
             </body>
           </html>
         `;

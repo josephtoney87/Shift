@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  X, Check, Clock, User, Tag, Info, AlertTriangle, Play, Square,
+  X, Check, User, Info, AlertTriangle,
   Trash2, Printer, Plus, RefreshCw, MessageSquarePlus, CheckCircle2, ClipboardList
 } from 'lucide-react';
-import { format, formatDistanceToNow, formatDuration, intervalToDuration } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { Task, TaskStatus, TaskPriority, Worker, Part } from '../types';
 import { useShopStore } from '../store/useShopStore';
 import WorkOrderValidator from './WorkOrderValidator';
@@ -63,8 +63,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
     addTaskNote,
     getExpandedTask,
     getTaskNotesByTaskId,
-    startTaskTimer,
-    stopTaskTimer,
     carryOverTask,
     deleteTask,
     printTask,
@@ -76,7 +74,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
   
   const [manualWorkerName, setManualWorkerName] = useState('');
   const [noteText, setNoteText] = useState('');
-  const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [isWorkOrderValid, setIsWorkOrderValid] = useState(false);
   const [existingTask, setExistingTask] = useState<any>(null);
   
@@ -600,79 +597,56 @@ const TaskModal: React.FC<TaskModalProps> = ({
               </div>
             </div>
 
-            {/* Time Tracking (View Mode Only) */}
-            {mode === 'view' && task && (
+            {/* Additional Notes Section */}
+            {mode === 'view' && (
               <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Time Tracking</h3>
-                
-                {task.timeLogs && task.timeLogs.length > 0 ? (
-                  <div className="space-y-3">
-                    {task.timeLogs.map((log) => (
-                      <div key={log.id} className="bg-neutral-50 p-3 rounded-md border">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="font-medium text-sm">
-                              {workers.find(w => w.id === log.workerId)?.name || 'Unknown Worker'}
-                            </div>
-                            <div className="text-sm text-neutral-600">
-                              Started: {format(new Date(log.startTime), 'MMM d, yyyy HH:mm')}
-                            </div>
-                            {log.endTime && (
-                              <div className="text-sm text-neutral-600">
-                                Ended: {format(new Date(log.endTime), 'MMM d, yyyy HH:mm')}
-                              </div>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            {log.duration ? (
-                              <div className="text-sm font-medium">
-                                {log.duration} minutes
-                              </div>
-                            ) : (
-                              <div className="text-sm text-primary-600 font-medium">
-                                Running...
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center text-neutral-500 py-4">
-                    No time logs recorded
-                  </div>
-                )}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">Additional Notes</h3>
+                  <NotesExporter taskId={taskId} />
+                </div>
 
-                {task.activeTimeLog && (
-                  <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 mt-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-primary-800">Timer Running</div>
-                        <div className="text-sm text-primary-600">
-                          Started {formatDistanceToNow(new Date(task.activeTimeLog.startTime), { addSuffix: true })}
+                <div className="space-y-3 max-h-60 overflow-y-auto">
+                  {taskNotes.map((note) => (
+                    <div
+                      key={note.id}
+                      className="bg-neutral-50 p-3 rounded-md border border-neutral-200"
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <div className="font-medium text-sm text-neutral-700">
+                          {workers.find(w => w.id === note.workerId)?.name || 'Unknown Worker'}
+                        </div>
+                        <div className="text-xs text-neutral-500">
+                          {formatDistanceToNow(new Date(note.timestamp), { addSuffix: true })}
                         </div>
                       </div>
-                      <button
-                        onClick={() => stopTaskTimer(task.id)}
-                        className="px-4 py-2 bg-error-600 text-white rounded-md hover:bg-error-700 flex items-center"
-                      >
-                        <Square className="h-4 w-4 mr-2" />
-                        Stop Timer
-                      </button>
+                      <p className="text-sm text-neutral-600">{note.noteText}</p>
                     </div>
-                  </div>
-                )}
+                  ))}
 
-                {!task.activeTimeLog && task.workers.length > 0 && (
+                  {taskNotes.length === 0 && (
+                    <div className="text-center text-neutral-500 py-4">
+                      No additional notes yet
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 mt-4">
+                  <input
+                    type="text"
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    placeholder="Add an additional note..."
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+                  />
                   <button
-                    onClick={() => startTaskTimer(task.id, task.workers[0].id)}
-                    className="px-4 py-2 bg-success-600 text-white rounded-md hover:bg-success-700 flex items-center mt-4"
+                    type="button"
+                    onClick={handleAddNote}
+                    disabled={!noteText.trim()}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
                   >
-                    <Play className="h-4 w-4 mr-2" />
-                    Start Timer
+                    Add Note
                   </button>
-                )}
+                </div>
               </div>
             )}
           </form>

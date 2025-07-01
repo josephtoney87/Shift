@@ -1,21 +1,17 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Clock, UserCircle, Tag, CheckCircle2, AlertTriangle, AlertCircle, 
-  Play, Square, RotateCcw, ArrowLeftCircle, ArrowRightCircle, RefreshCw
+  Clock, UserCircle, CheckCircle2, AlertTriangle, AlertCircle, 
+  Square, RotateCcw, ArrowLeftCircle, ArrowRightCircle, RefreshCw
 } from 'lucide-react';
-import { TaskPriority, TaskStatus, Task, Worker, Part, TaskTimeLog } from '../types';
+import { TaskStatus, Task, Worker, Part } from '../types';
 import { useShopStore } from '../store/useShopStore';
-import { formatDistanceToNow } from 'date-fns';
 import Tooltip from './Tooltip';
 
 interface TaskCardProps {
   task: Task & { 
     part: Part;
     workers: Worker[];
-    timeLogs?: TaskTimeLog[];
-    activeTimeLog?: TaskTimeLog;
-    totalDuration?: number;
   };
   onClick: () => void;
   onMoveBack?: () => void;
@@ -28,7 +24,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   onMoveBack,
   onMoveForward
 }) => {
-  const { startTaskTimer, stopTaskTimer, updateTaskStatus } = useShopStore();
+  const { updateTaskStatus } = useShopStore();
 
   const statusConfig = {
     [TaskStatus.PENDING]: { 
@@ -45,22 +41,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
     }
   };
 
-  const handleTimerClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    if (task.activeTimeLog) {
-      stopTaskTimer(task.id);
-    } else if (task.workers.length > 0) {
-      startTaskTimer(task.id, task.workers[0].id);
-    }
-  };
-
   const handleContinueTask = (e: React.MouseEvent) => {
     e.stopPropagation();
     updateTaskStatus(task.id, TaskStatus.IN_PROGRESS);
-    if (task.workers.length > 0) {
-      startTaskTimer(task.id, task.workers[0].id);
-    }
   };
 
   const handleAddBack = (e: React.MouseEvent) => {
@@ -112,17 +95,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
             <Clock className="h-4 w-4 mr-1" />
             <span>Notes</span>
           </div>
-          
-          {task.activeTimeLog && (
-            <div className="text-primary-600 font-medium">
-              Running: {formatDistanceToNow(new Date(task.activeTimeLog.startTime))}
-            </div>
-          )}
-          {task.totalDuration && !task.activeTimeLog && (
-            <div className="text-neutral-600">
-              Total: {task.totalDuration} min
-            </div>
-          )}
         </div>
         
         <div className="border-t border-neutral-200 pt-3">
@@ -180,29 +152,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 </Tooltip>
               )}
               
-              {task.status !== TaskStatus.COMPLETED && task.workers.length > 0 && (
-                <Tooltip 
-                  content={task.activeTimeLog ? 'Stop time tracking for this note' : 'Start time tracking for this note'}
-                  position="top"
-                >
-                  <button
-                    onClick={handleTimerClick}
-                    className={`p-1.5 rounded-full ${
-                      task.activeTimeLog
-                        ? 'bg-error-100 text-error-600 hover:bg-error-200'
-                        : 'bg-success-100 text-success-600 hover:bg-success-200'
-                    }`}
-                  >
-                    {task.activeTimeLog ? (
-                      <Square className="h-4 w-4" />
-                    ) : (
-                      <Play className="h-4 w-4" />
-                    )}
-                  </button>
-                </Tooltip>
-              )}
-              
-              {task.status === TaskStatus.COMPLETED && !task.activeTimeLog && (
+              {task.status === TaskStatus.COMPLETED && (
                 <CheckCircle2 className="h-5 w-5 text-success-500" />
               )}
 

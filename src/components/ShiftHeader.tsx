@@ -24,14 +24,7 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
   
   const [showAddShift, setShowAddShift] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-  const [showEditShift, setShowEditShift] = useState<string | null>(null);
   const [newShift, setNewShift] = useState({
-    type: ShiftType.S1,
-    startTime: '06:00',
-    endTime: '14:00'
-  });
-
-  const [editShift, setEditShift] = useState({
     type: ShiftType.S1,
     startTime: '06:00',
     endTime: '14:00'
@@ -44,40 +37,8 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
 
   const handleAddShift = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    try {
-      addShift(newShift);
-      setShowAddShift(false);
-      setNewShift({
-        type: ShiftType.S1,
-        startTime: '06:00',
-        endTime: '14:00'
-      });
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to add shift');
-    }
-  };
-
-  const handleEditShift = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!showEditShift) return;
-    
-    try {
-      updateShift(showEditShift, editShift);
-      setShowEditShift(null);
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to update shift');
-    }
-  };
-
-  const openEditShift = (shift: any) => {
-    setEditShift({
-      type: shift.type,
-      startTime: shift.startTime,
-      endTime: shift.endTime
-    });
-    setShowEditShift(shift.id);
+    addShift(newShift);
+    setShowAddShift(false);
   };
 
   const handleDeleteShift = (shiftId: string) => {
@@ -163,14 +124,13 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
               {shifts.map((shift) => (
                 <div
                   key={shift.id}
-                  className="relative group cursor-pointer"
-                  onClick={() => openEditShift(shift)}
+                  className="relative group"
                 >
                   <Tooltip
-                    content="Click to edit shift times, or hover to see delete option"
+                    content="Shows the current shift and its hours"
                     position="bottom"
                   >
-                    <div className="flex flex-col items-center bg-red-700 dark:bg-red-800 p-2 rounded-md relative hover:bg-red-600 dark:hover:bg-red-700 transition-colors">
+                    <div className="flex flex-col items-center bg-red-700 dark:bg-red-800 p-2 rounded-md relative">
                       <span className="font-semibold">Shift {shift.type}</span>
                       <span className="text-sm text-red-200 dark:text-red-300">
                         {shift.startTime} - {shift.endTime}
@@ -249,74 +209,6 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
             </div>
           </div>
         )}
-
-        {/* Edit Shift Modal */}
-        {showEditShift && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Edit Shift</h2>
-              
-              <form onSubmit={handleEditShift} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Shift Type
-                  </label>
-                  <select
-                    value={editShift.type}
-                    onChange={(e) => setEditShift({ ...editShift, type: e.target.value as ShiftType })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
-                  >
-                    {Object.values(ShiftType).map((type) => (
-                      <option key={type} value={type}>
-                        Shift {type}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Start Time
-                  </label>
-                  <input
-                    type="time"
-                    value={editShift.startTime}
-                    onChange={(e) => setEditShift({ ...editShift, startTime: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    End Time
-                  </label>
-                  <input
-                    type="time"
-                    value={editShift.endTime}
-                    onChange={(e) => setEditShift({ ...editShift, endTime: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
-                  />
-                </div>
-                
-                <div className="flex justify-end space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowEditShift(null)}
-                    className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-800"
-                  >
-                    Update Shift
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
         {/* Add Shift Modal */}
         {showAddShift && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -328,25 +220,16 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Shift Type
                   </label>
-                  {shifts.length >= 3 && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                      Maximum number of shifts reached. Delete a shift to add a new one.
-                    </p>
-                  )}
                   <select
                     value={newShift.type}
                     onChange={(e) => setNewShift({ ...newShift, type: e.target.value as ShiftType })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
-                    disabled={shifts.length >= 3}
                   >
-                    {Object.values(ShiftType)
-                      .filter(type => !shifts.some(s => s.type === type))
-                      .map((type) => (
-                        <option key={type} value={type}>
-                          Shift {type}
-                        </option>
-                      ))
-                    }
+                    {Object.values(ShiftType).map((type) => (
+                      <option key={type} value={type}>
+                        Shift {type}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 
@@ -377,21 +260,13 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
                 <div className="flex justify-end space-x-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowAddShift(false);
-                      setNewShift({
-                        type: ShiftType.S1,
-                        startTime: '06:00',
-                        endTime: '14:00'
-                      });
-                    }}
+                    onClick={() => setShowAddShift(false)}
                     className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={shifts.length >= 3 || shifts.some(s => s.type === newShift.type)}
                     className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-800"
                   >
                     Add Shift

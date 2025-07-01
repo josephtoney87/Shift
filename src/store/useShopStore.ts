@@ -381,12 +381,6 @@ export const useShopStore = create(
       },
       
       addShift: (shift) => {
-        // Check for duplicate shift types
-        const existingShift = get().shifts.find(s => s.type === shift.type);
-        if (existingShift) {
-          throw new Error(`Shift ${shift.type} already exists. Each shift type can only exist once.`);
-        }
-        
         const newShift: Shift = {
           id: uuidv4(),
           ...shift
@@ -400,14 +394,6 @@ export const useShopStore = create(
       },
       
       updateShift: (id, updates) => {
-        // If updating type, check for duplicates
-        if (updates.type) {
-          const existingShift = get().shifts.find(s => s.type === updates.type && s.id !== id);
-          if (existingShift) {
-            throw new Error(`Shift ${updates.type} already exists. Each shift type can only exist once.`);
-          }
-        }
-        
         set((state) => ({
           shifts: state.shifts.map((shift) =>
             shift.id === id ? { ...shift, ...updates } : shift
@@ -830,26 +816,6 @@ export const useShopStore = create(
       
       getTaskSummaryForDate: (date) => {
         const state = get();
-        
-        // Ensure we always have the default shifts available
-        if (state.shifts.length === 0) {
-          // Initialize with default shifts if none exist
-          const defaultShifts = [
-            { id: uuidv4(), type: ShiftType.S1, startTime: '06:00', endTime: '14:00' },
-            { id: uuidv4(), type: ShiftType.S2, startTime: '14:00', endTime: '22:00' },
-            { id: uuidv4(), type: ShiftType.S3, startTime: '22:00', endTime: '06:00' }
-          ];
-          
-          set((state) => ({
-            shifts: defaultShifts
-          }));
-          
-          // Save the default shifts
-          defaultShifts.forEach(shift => {
-            persistenceService.saveData('shifts', shift, 'create');
-          });
-        }
-        
         let tasks = state.tasks.filter((t) => t.createdAt.startsWith(date));
         
         if (state.viewMode === ViewMode.MY_VIEW && state.currentUser) {

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { TaskStatus, Task, Worker, Part } from '../types';
 import { useShopStore } from '../store/useShopStore';
-import { format, addDays } from 'date-fns';
+import { format, addDays, parseISO } from 'date-fns';
 import Tooltip from './Tooltip';
 
 interface TaskCardProps {
@@ -65,7 +65,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
   const handleMoveToNextDay = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const nextDay = format(addDays(new Date(task.createdAt), 1), 'MMMM d, yyyy');
+    const nextDay = format(addDays(parseISO(task.createdAt), 1), 'MMMM d, yyyy');
     if (window.confirm(`Move this note to tomorrow (${nextDay}) first shift?`)) {
       moveTaskToNextDay(task.id);
     }

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { format, addDays } from 'date-fns';
+import { format, addDays, parseISO } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   Shift, Worker, Part, Task, TaskNote, TaskTimeLog, ShiftReport, User,
@@ -593,7 +593,7 @@ export const useShopStore = create(
         if (!s1Shift) return;
         
         // Calculate next day using the current task's creation date
-        const currentDate = new Date(task.createdAt);
+        const currentDate = parseISO(task.createdAt);
         const nextDay = addDays(currentDate, 1);
         
         set((state) => ({

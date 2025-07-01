@@ -85,7 +85,6 @@ interface ShopState {
   moveTaskToShift: (taskId: string, newShiftId: string) => void;
   carryOverTask: (taskId: string, newShiftId: string) => void;
   moveTaskToNextDay: (taskId: string) => void;
-  updateTask: (taskId: string, updates: Partial<Task>) => void;
   
   // Worker actions
   addManualWorker: (name: string, shiftId: string) => string;
@@ -558,21 +557,6 @@ export const useShopStore = create(
         
         if (taskToDelete) {
           persistenceService.saveData('tasks', { ...taskToDelete, deleted_at: new Date().toISOString() }, 'delete');
-        }
-      },
-      
-      updateTask: (taskId, updates) => {
-        set((state) => ({
-          tasks: state.tasks.map((task) =>
-            task.id === taskId
-              ? { ...task, ...updates, updatedAt: new Date().toISOString() }
-              : task
-          )
-        }));
-        
-        const updatedTask = get().tasks.find(t => t.id === taskId);
-        if (updatedTask) {
-          persistenceService.saveData('tasks', updatedTask, 'update');
         }
       },
       

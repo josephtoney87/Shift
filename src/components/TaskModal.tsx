@@ -1,87 +1,73 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, User, FileText, ClipboardList } from 'lucide-react';
-import { Task } from '../types';
-import { useShopStore } from '../store/useShopStore';
+import { X, Plus, Trash2, Clock, AlertTriangle, User, Package } from 'lucide-react';
+import { Task, Worker, Part } from '../types';
 
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  taskId?: string | null;
+  onSave: (task: Partial<Task>) => void;
+  task?: Task | null;
+  workers: Worker[];
+  parts: Part[];
   shiftId?: string;
 }
 
 export default function TaskModal({
   isOpen,
   onClose,
-  taskId,
+  onSave,
+  task,
+  workers,
+  parts,
   shiftId
 }: TaskModalProps) {
-  const { 
-    tasks, 
-    workers, 
-    parts, 
-    addTask, 
-    updateTask, 
-    currentUser 
-  } = useShopStore();
-  
-  const task = taskId ? tasks.find(t => t.id === taskId) : null;
-  
   const [formData, setFormData] = useState({
     description: '',
-    workOrderNumber: '',
+    estimated_duration: 60,
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
+    part_id: '',
     status: 'pending' as 'pending' | 'in_progress' | 'completed',
-    shiftId: shiftId || ''
+    shift_id: shiftId || ''
   });
 
   const [assignedWorkers, setAssignedWorkers] = useState<string[]>([]);
-  const [checklistItems, setChecklistItems] = useState<string[]>(['']);
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
     if (task) {
       setFormData({
         description: task.description || '',
-        workOrderNumber: task.workOrderNumber || '',
+        estimated_duration: task.estimated_duration || 60,
+        priority: task.priority || 'medium',
+        part_id: task.part_id || '',
         status: task.status || 'pending',
-        shiftId: task.shiftId || shiftId || ''
+        shift_id: task.shift_id || shiftId || ''
       });
       setAssignedWorkers([]);
-      setChecklistItems(['']);
+      setNotes('');
     } else {
       setFormData({
         description: '',
-        workOrderNumber: '',
+        estimated_duration: 60,
+        priority: 'medium',
+        part_id: '',
         status: 'pending',
-        shiftId: shiftId || ''
+        shift_id: shiftId || ''
       });
       setAssignedWorkers([]);
-      setChecklistItems(['']);
+      setNotes('');
     }
-  }, [task, shiftId, taskId]);
+  }, [task, shiftId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (task && taskId) {
-      // Update existing task
-      updateTask(taskId, {
-        description: formData.description,
-        workOrderNumber: formData.workOrderNumber,
-        status: formData.status,
-        shiftId: formData.shiftId
-      });
-    } else {
-      // Create new task
-      addTask({
-        workOrderNumber: formData.workOrderNumber || `WO-${Date.now()}`,
-        description: formData.description,
-        status: formData.status,
-        shiftId: formData.shiftId,
-        assignedWorkers: assignedWorkers,
-        createdBy: currentUser?.id || 'unknown'
-      });
-    }
-    
+    const taskData = {
+      ...formData,
+      id: task?.id
+    };
+
+    onSave(taskData);
     onClose();
   };
 
@@ -93,19 +79,14 @@ export default function TaskModal({
     );
   };
 
-  const addChecklistItem = () => {
-    setChecklistItems(prev => [...prev, '']);
-  };
+  const canSubmit = formData.description.trim().length > 0 && formData.estimated_duration > 0;
 
-  const updateChecklistItem = (index: number, value: string) => {
-    setChecklistItems(prev => prev.map((item, i) => i === index ? value : item));
+  const priorityColors = {
+    low: 'bg-green-100 text-green-800 border-green-200',
+    medium: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    high: 'bg-orange-100 text-orange-800 border-orange-200',
+    urgent: 'bg-red-100 text-red-800 border-red-200'
   };
-
-  const removeChecklistItem = (index: number) => {
-    setChecklistItems(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const canSubmit = formData.description.trim().length > 0 && formData.workOrderNumber.trim().length > 0;
 
   const statusColors = {
     pending: 'bg-gray-100 text-gray-800 border-gray-200',
@@ -122,7 +103,7 @@ export default function TaskModal({
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <h2 className="text-2xl font-bold text-gray-900">
-              {task ? 'Edit Notes & Checklist' : 'Create New Notes & Checklist'}
+              {task ? 'Edit Task' : 'Create New Task'}
             </h2>
             <button
               type="button"
@@ -134,75 +115,80 @@ export default function TaskModal({
           </div>
 
           <div className="p-6 space-y-6">
-            {/* Work Order */}
+            {/* Task Description */}
             <div>
-              <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-                <FileText className="w-4 h-4 mr-2" />
-                Work Order *
-              </label>
-              <input
-                type="text"
-                value={formData.workOrderNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, workOrderNumber: e.target.value }))}
-                placeholder="Enter work order number..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              />
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-                <FileText className="w-4 h-4 mr-2" />
-                Notes *
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Task Description *
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Enter detailed notes..."
+                placeholder="Enter detailed task description..."
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 required
               />
             </div>
 
-            {/* Checklist */}
+            {/* Part Selection */}
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="flex items-center text-sm font-medium text-gray-700">
-                  <ClipboardList className="w-4 h-4 mr-2" />
-                  Checklist
-                </label>
-                <button
-                  type="button"
-                  onClick={addChecklistItem}
-                  className="flex items-center px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Add Item
-                </button>
-              </div>
-              <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-3">
-                {checklistItems.map((item, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <input
-                      type="text"
-                      value={item}
-                      onChange={(e) => updateChecklistItem(index, e.target.value)}
-                      placeholder="Enter checklist item..."
-                      className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    {checklistItems.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeChecklistItem(index)}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
+              <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                <Package className="w-4 h-4 mr-2" />
+                Associated Part
+              </label>
+              <select
+                value={formData.part_id}
+                onChange={(e) => setFormData(prev => ({ ...prev, part_id: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select a part (optional)</option>
+                {parts.map(part => (
+                  <option key={part.id} value={part.id}>
+                    {part.part_number} - Rev {part.revision} ({part.material})
+                  </option>
                 ))}
+              </select>
+            </div>
+
+            {/* Priority and Duration */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  Priority
+                </label>
+                <select
+                  value={formData.priority}
+                  onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as any }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="low">Low Priority</option>
+                  <option value="medium">Medium Priority</option>
+                  <option value="high">High Priority</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+                <div className={`mt-2 px-3 py-1 rounded-md text-xs font-medium border ${priorityColors[formData.priority]} inline-block`}>
+                  {formData.priority.charAt(0).toUpperCase() + formData.priority.slice(1)}
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                  <Clock className="w-4 h-4 mr-2" />
+                  Estimated Duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  value={formData.estimated_duration}
+                  onChange={(e) => setFormData(prev => ({ ...prev, estimated_duration: parseInt(e.target.value) || 0 }))}
+                  min="1"
+                  step="15"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  {Math.floor(formData.estimated_duration / 60)}h {formData.estimated_duration % 60}m
+                </p>
               </div>
             </div>
 
@@ -254,6 +240,19 @@ export default function TaskModal({
               </div>
             </div>
 
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Additional Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Add any additional notes or instructions..."
+                rows={2}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              />
+            </div>
           </div>
 
           {/* Footer */}
@@ -274,7 +273,7 @@ export default function TaskModal({
                   : 'bg-gray-400 cursor-not-allowed'
               }`}
             >
-              {task ? 'Update Notes' : 'Create Notes'}
+              {task ? 'Update Task' : 'Create Task'}
             </button>
           </div>
         </form>

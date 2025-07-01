@@ -105,7 +105,7 @@ export default function TaskModal({
     setChecklistItems(prev => prev.filter((_, i) => i !== index));
   };
 
-  const canSubmit = formData.description.trim().length > 0 && formData.workOrderNumber.trim().length > 0;</parameter>
+  const canSubmit = formData.description.trim().length > 0 && formData.workOrderNumber.trim().length > 0;
 
   const statusColors = {
     pending: 'bg-gray-100 text-gray-800 border-gray-200',

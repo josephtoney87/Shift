@@ -4,6 +4,8 @@ import {
   ChevronDown, 
   ChevronUp, 
   Users, 
+  CheckCircle2, 
+  XCircle, 
   MessageSquare,
   Clock,
   Plus,
@@ -27,6 +29,8 @@ const ShiftNotesPanel: React.FC<ShiftNotesPanelProps> = ({ selectedDate, classNa
     workers, 
     tasks,
     taskNotes,
+    isStartChecklistComplete,
+    isEndCleanupComplete,
     addTaskNote
   } = useShopStore();
 
@@ -51,10 +55,15 @@ const ShiftNotesPanel: React.FC<ShiftNotesPanelProps> = ({ selectedDate, classNa
       };
     }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
+    const startChecklistComplete = isStartChecklistComplete(shift.id, selectedDate);
+    const endCleanupComplete = isEndCleanupComplete(shift.id, selectedDate);
+
     return {
       workers: shiftWorkers,
       tasks: shiftTasks,
-      notes: shiftNotes
+      notes: shiftNotes,
+      startChecklistComplete,
+      endCleanupComplete
     };
   };
 
@@ -109,6 +118,11 @@ const ShiftNotesPanel: React.FC<ShiftNotesPanelProps> = ({ selectedDate, classNa
       content += 'No workers assigned\n';
     }
     content += '\n';
+
+    // Checklists
+    content += 'CHECKLISTS:\n';
+    content += `Start of Shift: ${shiftData.startChecklistComplete ? 'COMPLETED' : 'PENDING'}\n`;
+    content += `End of Shift: ${shiftData.endCleanupComplete ? 'COMPLETED' : 'PENDING'}\n\n`;
 
     // Tasks Summary
     content += 'TASKS SUMMARY:\n';
@@ -187,6 +201,19 @@ const ShiftNotesPanel: React.FC<ShiftNotesPanelProps> = ({ selectedDate, classNa
                   </div>
                   
                   <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1">
+                      {shiftData.startChecklistComplete ? (
+                        <CheckCircle2 className="h-4 w-4 text-success-500" title="Start checklist complete" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-error-500" title="Start checklist pending" />
+                      )}
+                      {shiftData.endCleanupComplete ? (
+                        <CheckCircle2 className="h-4 w-4 text-success-500" title="End cleanup complete" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-error-500" title="End cleanup pending" />
+                      )}
+                    </div>
+                    
                     <div className="text-sm text-neutral-500">
                       {shiftData.notes.length} notes
                     </div>
@@ -220,6 +247,33 @@ const ShiftNotesPanel: React.FC<ShiftNotesPanelProps> = ({ selectedDate, classNa
                     ) : (
                       <div className="text-sm text-neutral-500 italic">No workers assigned</div>
                     )}
+                  </div>
+
+                  {/* Checklist Status */}
+                  <div>
+                    <h4 className="text-sm font-medium text-neutral-700 mb-2">Checklist Status</h4>
+                    <div className="space-y-1">
+                      <div className="flex items-center text-sm">
+                        {shiftData.startChecklistComplete ? (
+                          <CheckCircle2 className="h-4 w-4 text-success-500 mr-2" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-error-500 mr-2" />
+                        )}
+                        <span className={shiftData.startChecklistComplete ? 'text-success-700' : 'text-error-700'}>
+                          Start of Shift Checklist
+                        </span>
+                      </div>
+                      <div className="flex items-center text-sm">
+                        {shiftData.endCleanupComplete ? (
+                          <CheckCircle2 className="h-4 w-4 text-success-500 mr-2" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-error-500 mr-2" />
+                        )}
+                        <span className={shiftData.endCleanupComplete ? 'text-success-700' : 'text-error-700'}>
+                          End of Shift Cleanup
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Tasks Summary */}

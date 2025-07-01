@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   Clock, UserCircle, CheckCircle2, AlertTriangle, AlertCircle, 
-  Square, RotateCcw, ArrowLeftCircle, ArrowRightCircle, RefreshCw, ArrowRight
+  Square, RotateCcw, ArrowLeftCircle, ArrowRightCircle, RefreshCw, ArrowRight, Calendar
 } from 'lucide-react';
 import { TaskStatus, Task, Worker, Part } from '../types';
 import { useShopStore } from '../store/useShopStore';
@@ -170,7 +170,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                     onClick={handleMoveToNextDay}
                     className="p-1.5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center"
                   >
-                    <ArrowRight className="h-4 w-4 mr-1" />
+                    <Calendar className="h-4 w-4 mr-1" />
                     <span className="text-xs">Next Day</span>
                   </button>
                 </Tooltip>

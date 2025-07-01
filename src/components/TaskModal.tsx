@@ -3,9 +3,9 @@ import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Check, User, Info, AlertTriangle,
-  Trash2, Printer, Plus, RefreshCw, MessageSquarePlus, CheckCircle2, ClipboardList
+  Trash2, Printer, Plus, RefreshCw, MessageSquarePlus, CheckCircle2, ClipboardList, Calendar
 } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, addDays, parseISO } from 'date-fns';
 import { Task, TaskStatus, TaskPriority, Worker, Part } from '../types';
 import { useShopStore } from '../store/useShopStore';
 import WorkOrderValidator from './WorkOrderValidator';
@@ -69,7 +69,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
     addManualWorker,
     deleteWorker,
     createStartOfShiftChecklist,
-    createEndOfShiftCleanup
+    createEndOfShiftCleanup,
+    moveTaskToNextDay
   } = useShopStore();
   
   const [manualWorkerName, setManualWorkerName] = useState('');
@@ -249,6 +250,19 @@ const TaskModal: React.FC<TaskModalProps> = ({
       deleteWorker(workerId);
     }
   };
+
+  const handleMoveToNextDay = () => {
+    if (task) {
+      const nextDay = format(addDays(parseISO(task.createdAt), 1), 'MMMM d, yyyy');
+      if (window.confirm(`Move this note to tomorrow (${nextDay}) first shift?`)) {
+        moveTaskToNextDay(task.id);
+        onClose();
+      }
+    }
+  };
+
+  // Check if this is a Shift 3 task
+  const isShift3Task = task && shifts.find(s => s.id === task.shiftId)?.type === 'S3';
 
   if (!isOpen) return null;
 
@@ -678,6 +692,17 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
                 </button>
+                
+                {/* Save & Move to Next Day Button - Only for Shift 3 */}
+                {isShift3Task && (
+                  <button
+                    onClick={handleMoveToNextDay}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Save & Move to Next Day
+                  </button>
+                )}
                 
                 {task?.status !== TaskStatus.COMPLETED && (
                   <>

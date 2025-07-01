@@ -5,6 +5,18 @@ import {
   syncAllData, loadAllCloudData
 } from './supabaseOperations';
 
+// Check if user is currently authenticated (not just has credentials)
+async function isUserAuthenticated(): Promise<boolean> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user !== null;
+  } catch (error) {
+    return false;
+  }
+}
+
+// Tables that require authentication for operations
+const TABLES_REQUIRING_AUTH = ['shifts', 'workers', 'parts', 'tasks', 'task_notes', 'time_logs'];
 interface PendingOperation {
   id: string;
   type: 'create' | 'update' | 'delete';
@@ -271,6 +283,9 @@ class PersistenceService {
       return;
     }
 
+    // Check if user is actually authenticated
+    const isAuthenticated = await isUserAuthenticated();
+
     this.syncInProgress = true as boolean;
     this.lastSyncAttempt = Date.now() as number;
 
@@ -279,6 +294,7 @@ class PersistenceService {
     const operations = [...this.pendingOperations] as PendingOperation[];
     const successful: string[] = [] as string[];
     const failed: PendingOperation[] = [] as PendingOperation[];
+    const skippedAuth: PendingOperation[] = [] as PendingOperation[];
 
     // Process operations in batches to avoid overwhelming the server
     const batchSize = 5 as number;
@@ -287,11 +303,27 @@ class PersistenceService {
       
       await Promise.allSettled(
         batch.map(async (operation) => {
+          // Skip operations that require authentication when user is not authenticated
+          if (!isAuthenticated && TABLES_REQUIRING_AUTH.includes(operation.table)) {
+            console.log(`🔐 Skipping ${operation.table} operation - user not authenticated`);
+            skippedAuth.push(operation);
+            return;
+          }
+
           try {
             await this.saveToCloud(operation.table as string, operation.data, operation.type as string);
             successful.push(operation.id as string);
             console.log(`✅ Synced operation: ${operation.id as string}`);
           } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            
+            // Check if this is an authentication error
+            if (errorMessage.includes('authenticated') || errorMessage.includes('row-level security') || errorMessage.includes('JWT')) {
+              console.log(`🔐 Authentication error for ${operation.id as string} - will retry when authenticated`);
+              skippedAuth.push(operation);
+              return;
+            }
+
             console.error(`❌ Failed to sync operation ${operation.id as string}:`, error);
             
             // Retry logic with exponential backoff
@@ -311,8 +343,8 @@ class PersistenceService {
       }
     }
 
-    // Update pending operations
-    this.pendingOperations = failed as PendingOperation[];
+    // Update pending operations - keep failed operations and auth-skipped operations
+    this.pendingOperations = [...failed, ...skippedAuth] as PendingOperation[];
     this.savePendingOperations();
     this.notifyCallbacks();
 
@@ -326,6 +358,9 @@ class PersistenceService {
       console.log(`⚠️ ${failed.length as number} operations failed and will retry later`);
     }
   }
+    if ((skippedAuth.length as number) > 0) {
+      console.log(`🔐 ${skippedAuth.length as number} operations skipped due to authentication - will retry when authenticated`);
+    }
 
   async loadAllData() {
     if (!hasValidCredentials()) {

@@ -122,18 +122,36 @@ const ShiftHeader: React.FC<ShiftHeaderProps> = ({ onDateChange }) => {
             
             <div className="flex space-x-2">
               {shifts.map((shift) => (
-                <Tooltip
+                <div
                   key={shift.id}
-                  content="Shows the current shift and its hours. Select to change the shift view"
-                  position="bottom"
+                  className="relative group"
                 >
-                  <div className="flex flex-col items-center bg-red-700 dark:bg-red-800 p-2 rounded-md">
-                    <span className="font-semibold">Shift {shift.type}</span>
-                    <span className="text-sm text-red-200 dark:text-red-300">
-                      {shift.startTime} - {shift.endTime}
-                    </span>
-                  </div>
-                </Tooltip>
+                  <Tooltip
+                    content="Shows the current shift and its hours"
+                    position="bottom"
+                  >
+                    <div className="flex flex-col items-center bg-red-700 dark:bg-red-800 p-2 rounded-md relative">
+                      <span className="font-semibold">Shift {shift.type}</span>
+                      <span className="text-sm text-red-200 dark:text-red-300">
+                        {shift.startTime} - {shift.endTime}
+                      </span>
+                      
+                      {/* Delete button - only show if there are multiple shifts */}
+                      {shifts.length > 1 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDeleteConfirm(shift.id);
+                          }}
+                          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          title="Delete this shift"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  </Tooltip>
+                </div>
               ))}
               
               <Tooltip content="Add a new shift with custom hours" position="bottom">

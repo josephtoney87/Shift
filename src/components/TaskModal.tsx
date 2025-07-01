@@ -17,8 +17,8 @@ export default function TaskModal({
   onClose,
   onSave,
   task,
-  workers,
-  parts,
+  workers = [],
+  parts = [],
   shiftId
 }: TaskModalProps) {
   const [formData, setFormData] = useState({

@@ -40,8 +40,28 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
     }
   };
   
+  const getThemeClasses = (baseClasses: string) => {
+    switch (themeMode) {
+      case ThemeMode.DARK:
+        return baseClasses.replace(/bg-white/g, 'bg-gray-800')
+                         .replace(/bg-neutral-100/g, 'bg-gray-700')
+                         .replace(/text-neutral-800/g, 'text-white')
+                         .replace(/text-neutral-700/g, 'text-gray-300')
+                         .replace(/text-neutral-600/g, 'text-gray-400')
+                         .replace(/text-neutral-500/g, 'text-gray-500')
+                         .replace(/border-neutral-200/g, 'border-gray-700')
+                         .replace(/text-error-600/g, 'text-red-400')
+                         .replace(/hover:bg-error-50/g, 'hover:bg-red-900/20');
+      case ThemeMode.INVERT:
+        return baseClasses; // Keep tiles white in invert mode
+      case ThemeMode.LIGHT:
+      default:
+        return baseClasses;
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full bg-neutral-100 rounded-lg shadow-sm">
+    <div className={getThemeClasses("flex flex-col h-full bg-neutral-100 rounded-lg shadow-sm")}>
       <div className={`${
         shift.type === 'S1' ? 'bg-primary-700' :
         shift.type === 'S2' ? 'bg-secondary-700' :
@@ -93,7 +113,7 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
                   <div className="flex justify-end">
                     <button
                       onClick={handleClearAll}
-                      className="flex items-center px-3 py-1.5 text-sm text-error-600 hover:bg-error-50 rounded-md transition-colors"
+                      className={getThemeClasses("flex items-center px-3 py-1.5 text-sm text-error-600 hover:bg-error-50 rounded-md transition-colors")}
                     >
                       <Trash2 className="h-4 w-4 mr-1" />
                       Clear All
@@ -113,7 +133,7 @@ const ShiftColumn: React.FC<ShiftColumnProps> = ({
                   </div>
                 </>
               ) : (
-                <div className="flex items-center justify-center h-full text-neutral-400 text-center p-4">
+                <div className={getThemeClasses("flex items-center justify-center h-full text-neutral-400 text-center p-4")}>
                   <p>No notes for this shift</p>
                 </div>
               )}

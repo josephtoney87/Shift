@@ -222,13 +222,13 @@ const ShiftDashboard: React.FC = () => {
         {/* Enhanced Offline Notice */}
         <EnhancedOfflineNotice />
         
-        <div className="bg-white border-b border-neutral-200 px-4 py-2">
+        <div className={getThemeClasses("bg-white border-b border-neutral-200 px-4 py-2")}>
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Tooltip content="Select the date to view or manage notes for that shift" position="bottom">
                 <button
                   onClick={() => setShowCalendarView(true)}
-                  className="mr-3 p-2 hover:bg-neutral-100 rounded-md relative"
+                  className={getThemeClasses("mr-3 p-2 hover:bg-neutral-100 rounded-md relative")}
                 >
                   <Calendar className="h-5 w-5 text-neutral-500" />
                 </button>
@@ -242,7 +242,7 @@ const ShiftDashboard: React.FC = () => {
         </div>
 
         {/* Date and Status Info */}
-        <div className="bg-white border-b border-neutral-200 px-4 py-2">
+        <div className={getThemeClasses("bg-white border-b border-neutral-200 px-4 py-2")}>
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="flex items-center">
@@ -314,7 +314,7 @@ const ShiftDashboard: React.FC = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="px-4 py-3 bg-white border-b border-neutral-200">
+        <div className={getThemeClasses("px-4 py-3 bg-white border-b border-neutral-200")}>
           <div className="flex flex-wrap gap-4">
             {(shifts || []).map(shift => {
               if (!shift?.id) return null;
@@ -368,7 +368,7 @@ const ShiftDashboard: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white rounded-lg p-4 shadow-sm">
+            <div className={getThemeClasses("grid grid-cols-1 md:grid-cols-3 gap-4 bg-white rounded-lg p-4 shadow-sm")}>
               {tasksByShift.map(({ shift, tasks }, index) => {
                 if (!shift?.id) return null;
                 

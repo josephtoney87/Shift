@@ -30,6 +30,12 @@ export enum ViewMode {
   ALL_DATA = 'all_data'
 }
 
+export enum ThemeMode {
+  LIGHT = 'light',
+  DARK = 'dark',
+  INVERT = 'invert'
+}
+
 // Interface definitions
 export interface User {
   id: string;

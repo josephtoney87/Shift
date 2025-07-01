@@ -45,7 +45,6 @@ const ShiftDashboard: React.FC = () => {
     viewMode = ViewMode.MY_VIEW,
     pendingChanges = [],
     isInitialized = false,
-    themeMode = 'light',
     setSelectedDate,
     setSelectedTaskId,
     setTaskModalOpen,
@@ -62,21 +61,6 @@ const ShiftDashboard: React.FC = () => {
   const [showSimpleView, setShowSimpleView] = useState(false);
   const [showCalendarView, setShowCalendarView] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
-  
-  // Theme utility function
-  const getThemeClasses = (baseClasses: string): string => {
-    if (themeMode === 'dark') {
-      return baseClasses
-        .replace(/bg-white/g, 'bg-neutral-800')
-        .replace(/bg-neutral-50/g, 'bg-neutral-900')
-        .replace(/bg-neutral-100/g, 'bg-neutral-700')
-        .replace(/border-neutral-200/g, 'border-neutral-600')
-        .replace(/text-neutral-700/g, 'text-neutral-200')
-        .replace(/text-neutral-600/g, 'text-neutral-300')
-        .replace(/text-neutral-500/g, 'text-neutral-400');
-    }
-    return baseClasses;
-  };
   
   // Update pending count
   useEffect(() => {

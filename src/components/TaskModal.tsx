@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Check, Clock, User, Tag, Info, AlertTriangle, Play, Square,
-  Trash2, Printer, Plus, RefreshCw, MessageSquarePlus, CheckCircle2, ClipboardList
+  Trash2, Printer, Plus, RefreshCw, MessageSquarePlus
 } from 'lucide-react';
 import { format, formatDistanceToNow, formatDuration, intervalToDuration } from 'date-fns';
 import { Task, TaskStatus, TaskPriority, Worker, Part } from '../types';
@@ -16,24 +16,6 @@ interface TaskFormData {
   description: string;
   assignedWorkers: string[];
   status: TaskStatus;
-  // Checklist data
-  startChecklist?: {
-    workOrderNumber: string;
-    palletNumber: string;
-    partNumber: string;
-    programNumber: string;
-    startingBlockNumber: string;
-    toolNumber: string;
-    toolsRequiringAttention: string;
-    immediateAttentionTools: string;
-    notes: string;
-    safetyChecks: Record<string, boolean>;
-  };
-  endCleanup?: {
-    preparationChecks: Record<string, boolean>;
-    cleaningChecks: Record<string, boolean>;
-    notes: string;
-  };
 }
 
 interface TaskModalProps {
@@ -69,9 +51,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
     deleteTask,
     printTask,
     addManualWorker,
-    deleteWorker,
-    createStartOfShiftChecklist,
-    createEndOfShiftCleanup
+    deleteWorker
   } = useShopStore();
   
   const [manualWorkerName, setManualWorkerName] = useState('');
@@ -88,50 +68,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
       workOrderNumber: '',
       description: '',
       assignedWorkers: [],
-      status: TaskStatus.PENDING,
-      startChecklist: {
-        workOrderNumber: '',
-        palletNumber: '',
-        partNumber: '',
-        programNumber: '',
-        startingBlockNumber: '',
-        toolNumber: '',
-        toolsRequiringAttention: '',
-        immediateAttentionTools: '',
-        notes: '',
-        safetyChecks: {
-          workAreaReviewed: false,
-          measurementDevicesCalibrated: false,
-          measurementDevicesClean: false,
-          ipcMeasurementUnderstood: false,
-          materialIconGreen: false,
-          previousRoutingStepsComplete: false,
-          projectManagerNotesReviewed: false,
-          workOrderNotesReviewed: false,
-          setupOverviewReviewed: false,
-          materialQuantityConfirmed: false,
-        }
-      },
-      endCleanup: {
-        preparationChecks: {
-          wayLubeChecked: false,
-          coolantLevelChecked: false,
-          toolboxOrganized: false,
-          deburringToolsOrganized: false,
-          torqueWrenchCondition: false,
-          setupToolsStored: false,
-        },
-        cleaningChecks: {
-          dirtyRagsDisposed: false,
-          chipBarrelEmptied: false,
-          coolantDrainsCleaned: false,
-          coolantScreenCleaned: false,
-          floorMatCleaned: false,
-          toolsStored: false,
-          areaSweptMopped: false,
-        },
-        notes: ''
-      }
+      status: TaskStatus.PENDING
     }
   });
 
@@ -176,27 +113,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
         shiftId,
         createdAt: selectedDate
       });
-
-      // Save checklists if provided
-      if (data.startChecklist && Object.values(data.startChecklist.safetyChecks).some(Boolean)) {
-        createStartOfShiftChecklist({
-          ...data.startChecklist,
-          toolsRequiringAttention: data.startChecklist.toolsRequiringAttention.split(',').map(t => t.trim()).filter(Boolean),
-          immediateAttentionTools: data.startChecklist.immediateAttentionTools.split(',').map(t => t.trim()).filter(Boolean),
-          shiftId,
-          date: selectedDate,
-          completedBy: 'current-worker'
-        });
-      }
-
-      if (data.endCleanup && (Object.values(data.endCleanup.preparationChecks).some(Boolean) || Object.values(data.endCleanup.cleaningChecks).some(Boolean))) {
-        createEndOfShiftCleanup({
-          ...data.endCleanup,
-          shiftId,
-          date: selectedDate,
-          completedBy: 'current-worker'
-        });
-      }
       
       onClose();
     } else if (mode === 'edit' && task) {
@@ -257,7 +173,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 overflow-auto z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl my-8">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl my-8">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 rounded-t-lg">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold text-gray-800">
@@ -301,235 +217,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
               </label>
               <textarea
                 {...register('description', { required: true })}
-                rows={6}
+                rows={8}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 disabled={mode === 'view'}
                 placeholder="Enter detailed notes about the work order, setup requirements, special instructions, etc."
               />
             </div>
 
-            {/* Checklists Section */}
-            <div className="space-y-8 border-t border-gray-200 pt-6">
-              <h3 className="text-lg font-semibold text-gray-800">Checklists</h3>
-              
-              {/* Start of Shift Checklist */}
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center">
-                  <CheckCircle2 className="h-5 w-5 mr-2 text-primary-600" />
-                  Start of Shift Checklist
-                </h4>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Work Order Number
-                    </label>
-                    <input
-                      type="text"
-                      {...register('startChecklist.workOrderNumber')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      disabled={mode === 'view'}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Pallet Number
-                    </label>
-                    <input
-                      type="text"
-                      {...register('startChecklist.palletNumber')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      disabled={mode === 'view'}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Part Number
-                    </label>
-                    <input
-                      type="text"
-                      {...register('startChecklist.partNumber')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      disabled={mode === 'view'}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      CNC Program Number
-                    </label>
-                    <input
-                      type="text"
-                      {...register('startChecklist.programNumber')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      disabled={mode === 'view'}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Starting Block Number
-                    </label>
-                    <input
-                      type="text"
-                      {...register('startChecklist.startingBlockNumber')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      disabled={mode === 'view'}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tool Number
-                    </label>
-                    <input
-                      type="text"
-                      {...register('startChecklist.toolNumber')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      disabled={mode === 'view'}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tools Requiring Attention (comma-separated)
-                    </label>
-                    <input
-                      type="text"
-                      {...register('startChecklist.toolsRequiringAttention')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      disabled={mode === 'view'}
-                      placeholder="Tool 1, Tool 2, Tool 3"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tools Needing Immediate Attention (comma-separated)
-                    </label>
-                    <input
-                      type="text"
-                      {...register('startChecklist.immediateAttentionTools')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      disabled={mode === 'view'}
-                      placeholder="Tool 1, Tool 2, Tool 3"
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <h5 className="font-medium text-gray-900 mb-3">Safety Checks</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {Object.entries({
-                      workAreaReviewed: 'Review work area for safety concerns',
-                      measurementDevicesCalibrated: 'Measurement devices calibration verified',
-                      measurementDevicesClean: 'Measurement devices clean and zeroed',
-                      ipcMeasurementUnderstood: 'IPC measurement understanding confirmed',
-                      materialIconGreen: 'Material icon is green',
-                      previousRoutingStepsComplete: 'Previous routing steps completed',
-                      projectManagerNotesReviewed: 'Project manager notes reviewed',
-                      workOrderNotesReviewed: 'Work order notes reviewed',
-                      setupOverviewReviewed: 'Setup overview reviewed',
-                      materialQuantityConfirmed: 'Material quantity confirmed'
-                    }).map(([key, label]) => (
-                      <label key={key} className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          {...register(`startChecklist.safetyChecks.${key}` as any)}
-                          disabled={mode === 'view'}
-                          className="h-4 w-4 rounded border-gray-300"
-                        />
-                        <span className="text-sm text-gray-700">{label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Checklist Notes
-                  </label>
-                  <textarea
-                    {...register('startChecklist.notes')}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    disabled={mode === 'view'}
-                  />
-                </div>
-              </div>
-
-              {/* End of Shift Cleanup */}
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center">
-                  <ClipboardList className="h-5 w-5 mr-2 text-warning-600" />
-                  End of Shift Cleanup
-                </h4>
-
-                <div className="space-y-4">
-                  <div>
-                    <h5 className="font-medium text-gray-900 mb-3">Preparation</h5>
-                    <div className="space-y-2">
-                      {Object.entries({
-                        wayLubeChecked: 'Way lube check, if less than half top it off',
-                        coolantLevelChecked: 'Coolant level check, if low, fill',
-                        toolboxOrganized: 'All toolbox tools put away in appropriate spots',
-                        deburringToolsOrganized: 'Organize all deburring and measuring tools currently used',
-                        torqueWrenchCondition: 'Torque wrench and hammer in good condition and hanging in their spot',
-                        setupToolsStored: 'If in middle of setup, put away all finished items'
-                      }).map(([key, label]) => (
-                        <label key={key} className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            {...register(`endCleanup.preparationChecks.${key}` as any)}
-                            disabled={mode === 'view'}
-                            className="h-4 w-4 rounded border-gray-300"
-                          />
-                          <span className="text-sm text-gray-700">{label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h5 className="font-medium text-gray-900 mb-3">Clean</h5>
-                    <div className="space-y-2">
-                      {Object.entries({
-                        dirtyRagsDisposed: 'Pick up all dirty rags and dispose properly',
-                        chipBarrelEmptied: 'Empty and reposition chip barrel, ensure proper material separation',
-                        coolantDrainsCleaned: 'Clean coolant drains inside machine and empty auger',
-                        coolantScreenCleaned: 'Clean screen underneath coolant drain in tank',
-                        floorMatCleaned: 'Shake out floor mat and clean underneath',
-                        toolsStored: 'Put away all tool holders and tools not being used',
-                        areaSweptMopped: 'Sweep and/or mop area'
-                      }).map(([key, label]) => (
-                        <label key={key} className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            {...register(`endCleanup.cleaningChecks.${key}` as any)}
-                            disabled={mode === 'view'}
-                            className="h-4 w-4 rounded border-gray-300"
-                          />
-                          <span className="text-sm text-gray-700">{label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Cleanup Notes
-                    </label>
-                    <textarea
-                      {...register('endCleanup.notes')}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      disabled={mode === 'view'}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Assigned Workers */}
-            <div className="border-t border-gray-200 pt-6">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Assigned Workers
               </label>
@@ -599,6 +295,69 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Additional Notes (View Mode Only) */}
+            {mode === 'view' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium text-gray-900">Additional Notes</h3>
+                  <div className="flex items-center space-x-2">
+                    <NotesExporter taskId={taskId} />
+                    <button
+                      type="button"
+                      onClick={() => setNoteText('')}
+                      className="text-primary-600 hover:text-primary-700 flex items-center"
+                    >
+                      <MessageSquarePlus className="h-5 w-5 mr-1" />
+                      Add Note
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-3 max-h-60 overflow-y-auto">
+                  {taskNotes.map((note) => (
+                    <div
+                      key={note.id}
+                      className="bg-neutral-50 p-3 rounded-md border border-neutral-200"
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <div className="font-medium text-sm text-neutral-700">
+                          {workers.find(w => w.id === note.workerId)?.name || 'Unknown Worker'}
+                        </div>
+                        <div className="text-xs text-neutral-500">
+                          {formatDistanceToNow(new Date(note.timestamp), { addSuffix: true })}
+                        </div>
+                      </div>
+                      <p className="text-sm text-neutral-600">{note.noteText}</p>
+                    </div>
+                  ))}
+
+                  {taskNotes.length === 0 && (
+                    <div className="text-center text-neutral-500 py-4">
+                      No additional notes yet
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    placeholder="Add an additional note..."
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddNote}
+                    disabled={!noteText.trim()}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
+                  >
+                    Add Note
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Time Tracking (View Mode Only) */}
             {mode === 'view' && task && (

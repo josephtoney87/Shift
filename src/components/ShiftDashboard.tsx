@@ -10,7 +10,6 @@ import { persistenceService } from '../services/persistenceService';
 import ShiftHeader from './ShiftHeader';
 import ShiftColumn from './ShiftColumn';
 import TaskModal from './TaskModal';
-import StatsBar from './StatsBar';
 import SimpleView from './SimpleView';
 import CalendarView from './CalendarView';
 import SearchBar from './SearchBar';
@@ -200,14 +199,6 @@ const ShiftDashboard: React.FC = () => {
         break;
     }
   };
-  
-  const statsData = [
-    { label: 'Total Notes', value: taskSummary.total || 0, color: 'bg-neutral-500' },
-    { label: 'Completed', value: taskSummary.completed || 0, color: 'bg-success-500' },
-    { label: 'In Progress', value: taskSummary.inProgress || 0, color: 'bg-primary-500' },
-    { label: 'Pending', value: taskSummary.pending || 0, color: 'bg-warning-500' },
-    { label: 'Carried Over', value: taskSummary.carriedOver || 0, color: 'bg-accent-500' }
-  ];
 
   if (showCalendarView) {
     return (
@@ -227,7 +218,6 @@ const ShiftDashboard: React.FC = () => {
       {/* Fixed Header */}
       <div className="flex-none">
         <ShiftHeader onDateChange={handleDateChange} />
-        <StatsBar stats={statsData} />
         
         {/* Enhanced Offline Notice */}
         <EnhancedOfflineNotice />

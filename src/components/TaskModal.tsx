@@ -5,7 +5,7 @@ import {
   X, Check, User, Info, AlertTriangle,
   Trash2, Printer, Plus, RefreshCw, MessageSquarePlus, CheckCircle2, ClipboardList, Calendar
 } from 'lucide-react';
-import { format, formatDistanceToNow, addDays, parseISO } from 'date-fns';
+import { format, formatDistanceToNow, addDays, parseISO, isValid } from 'date-fns';
 import { Task, TaskStatus, TaskPriority, Worker, Part } from '../types';
 import { useShopStore } from '../store/useShopStore';
 import WorkOrderValidator from './WorkOrderValidator';
@@ -253,10 +253,24 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
   const handleMoveToNextDay = () => {
     if (task) {
-      const nextDay = format(addDays(parseISO(task.createdAt), 1), 'MMMM d, yyyy');
-      if (window.confirm(`Move this note to tomorrow (${nextDay}) first shift?`)) {
-        moveTaskToNextDay(task.id);
-        onClose();
+      try {
+        // Validate the task.createdAt value before parsing
+        const parsedDate = parseISO(task.createdAt);
+        
+        if (!isValid(parsedDate)) {
+          console.error('Invalid date value in task.createdAt:', task.createdAt);
+          alert('Unable to move task: Invalid date value. Please contact support.');
+          return;
+        }
+        
+        const nextDay = format(addDays(parsedDate, 1), 'MMMM d, yyyy');
+        if (window.confirm(`Move this note to tomorrow (${nextDay}) first shift?`)) {
+          moveTaskToNextDay(task.id);
+          onClose();
+        }
+      } catch (error) {
+        console.error('Error processing date for task move:', error);
+        alert('Unable to move task: Date processing error. Please contact support.');
       }
     }
   };

@@ -76,7 +76,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
   
   const [manualWorkerName, setManualWorkerName] = useState('');
   const [noteText, setNoteText] = useState('');
-  const [activeTab, setActiveTab] = useState<'details' | 'checklists' | 'time'>('details');
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [isWorkOrderValid, setIsWorkOrderValid] = useState(false);
   const [existingTask, setExistingTask] = useState<any>(null);
@@ -269,279 +268,217 @@ const TaskModal: React.FC<TaskModalProps> = ({
               <X size={24} />
             </button>
           </div>
-          
-          {/* Tab Navigation */}
-          <div className="flex space-x-4 mt-4">
-            <button
-              onClick={() => setActiveTab('details')}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${
-                activeTab === 'details' 
-                  ? 'bg-primary-100 text-primary-700' 
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Details
-            </button>
-            <button
-              onClick={() => setActiveTab('checklists')}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${
-                activeTab === 'checklists' 
-                  ? 'bg-primary-100 text-primary-700' 
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Checklists
-            </button>
-            {mode === 'view' && (
-              <button
-                onClick={() => setActiveTab('time')}
-                className={`px-4 py-2 rounded-md text-sm font-medium ${
-                  activeTab === 'time' 
-                    ? 'bg-primary-100 text-primary-700' 
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Time Tracking
-              </button>
-            )}
-          </div>
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[calc(100vh-16rem)]">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {activeTab === 'details' && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Work Order Number *
-                  </label>
-                  <input
-                    type="text"
-                    {...register('workOrderNumber', { required: true })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    disabled={mode === 'view'}
-                  />
-                  {mode === 'create' && (
-                    <WorkOrderValidator
-                      workOrderNumber={watch('workOrderNumber') || ''}
-                      onValidation={(isValid, existing) => {
-                        setIsWorkOrderValid(isValid);
-                        setExistingTask(existing);
-                      }}
+            {/* Work Order Number */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Work Order Number *
+              </label>
+              <input
+                type="text"
+                {...register('workOrderNumber', { required: true })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                disabled={mode === 'view'}
+              />
+              {mode === 'create' && (
+                <WorkOrderValidator
+                  workOrderNumber={watch('workOrderNumber') || ''}
+                  onValidation={(isValid, existing) => {
+                    setIsWorkOrderValid(isValid);
+                    setExistingTask(existing);
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Notes Section */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Notes
+              </label>
+              <textarea
+                {...register('description', { required: true })}
+                rows={6}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                disabled={mode === 'view'}
+                placeholder="Enter detailed notes about the work order, setup requirements, special instructions, etc."
+              />
+            </div>
+
+            {/* Checklists Section */}
+            <div className="space-y-8 border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-semibold text-gray-800">Checklists</h3>
+              
+              {/* Start of Shift Checklist */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center">
+                  <CheckCircle2 className="h-5 w-5 mr-2 text-primary-600" />
+                  Start of Shift Checklist
+                </h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Work Order Number
+                    </label>
+                    <input
+                      type="text"
+                      {...register('startChecklist.workOrderNumber')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      disabled={mode === 'view'}
                     />
-                  )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Pallet Number
+                    </label>
+                    <input
+                      type="text"
+                      {...register('startChecklist.palletNumber')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      disabled={mode === 'view'}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Part Number
+                    </label>
+                    <input
+                      type="text"
+                      {...register('startChecklist.partNumber')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      disabled={mode === 'view'}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      CNC Program Number
+                    </label>
+                    <input
+                      type="text"
+                      {...register('startChecklist.programNumber')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      disabled={mode === 'view'}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Starting Block Number
+                    </label>
+                    <input
+                      type="text"
+                      {...register('startChecklist.startingBlockNumber')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      disabled={mode === 'view'}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tool Number
+                    </label>
+                    <input
+                      type="text"
+                      {...register('startChecklist.toolNumber')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      disabled={mode === 'view'}
+                    />
+                  </div>
                 </div>
 
-                <div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tools Requiring Attention (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      {...register('startChecklist.toolsRequiringAttention')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      disabled={mode === 'view'}
+                      placeholder="Tool 1, Tool 2, Tool 3"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tools Needing Immediate Attention (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      {...register('startChecklist.immediateAttentionTools')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      disabled={mode === 'view'}
+                      placeholder="Tool 1, Tool 2, Tool 3"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <h5 className="font-medium text-gray-900 mb-3">Safety Checks</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {Object.entries({
+                      workAreaReviewed: 'Review work area for safety concerns',
+                      measurementDevicesCalibrated: 'Measurement devices calibration verified',
+                      measurementDevicesClean: 'Measurement devices clean and zeroed',
+                      ipcMeasurementUnderstood: 'IPC measurement understanding confirmed',
+                      materialIconGreen: 'Material icon is green',
+                      previousRoutingStepsComplete: 'Previous routing steps completed',
+                      projectManagerNotesReviewed: 'Project manager notes reviewed',
+                      workOrderNotesReviewed: 'Work order notes reviewed',
+                      setupOverviewReviewed: 'Setup overview reviewed',
+                      materialQuantityConfirmed: 'Material quantity confirmed'
+                    }).map(([key, label]) => (
+                      <label key={key} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          {...register(`startChecklist.safetyChecks.${key}` as any)}
+                          disabled={mode === 'view'}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
+                    Checklist Notes
                   </label>
                   <textarea
-                    {...register('description', { required: true })}
-                    rows={6}
+                    {...register('startChecklist.notes')}
+                    rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     disabled={mode === 'view'}
-                    placeholder="Enter detailed notes about the work order, setup requirements, special instructions, etc."
                   />
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Assigned Workers
-                  </label>
-                  
-                  {mode !== 'view' && (
-                    <div className="flex gap-2 mb-3">
-                      <input
-                        type="text"
-                        value={manualWorkerName}
-                        onChange={(e) => setManualWorkerName(e.target.value)}
-                        placeholder="Enter worker name"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (manualWorkerName.trim()) {
-                            const currentShiftId = task?.shiftId || shiftId;
-                            if (currentShiftId) {
-                              const workerId = addManualWorker(manualWorkerName.trim(), currentShiftId);
-                              const currentWorkers = watch('assignedWorkers') || [];
-                              setValue('assignedWorkers', [...currentWorkers, workerId]);
-                              setManualWorkerName('');
-                            }
-                          }
-                        }}
-                        disabled={!manualWorkerName.trim()}
-                        className="px-3 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
-                  
-                  <div className="border border-gray-300 rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
-                    {workers.map(worker => (
-                      <div key={worker.id} className="flex items-center justify-between">
-                        <label className="flex items-center flex-1">
-                          <input
-                            type="checkbox"
-                            value={worker.id}
-                            {...register('assignedWorkers')}
-                            disabled={mode === 'view'}
-                            className="mr-2"
-                          />
-                          <span>
-                            {worker.name} ({worker.role})
-                            {worker.isManual && <span className="ml-1 text-sm text-gray-500">(Manual)</span>}
-                          </span>
-                        </label>
-                        {mode !== 'view' && (
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteWorker(worker.id)}
-                            className="p-1 text-error-600 hover:bg-error-50 rounded-md"
-                            title="Delete Worker"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    {workers.length === 0 && (
-                      <div className="text-center text-gray-500 py-2">
-                        No workers added yet
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
+              {/* End of Shift Cleanup */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center">
+                  <ClipboardList className="h-5 w-5 mr-2 text-warning-600" />
+                  End of Shift Cleanup
+                </h4>
 
-            {activeTab === 'checklists' && (
-              <div className="space-y-8">
-                {/* Start of Shift Checklist */}
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                    <CheckCircle2 className="h-5 w-5 mr-2 text-primary-600" />
-                    Start of Shift Checklist
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Work Order Number
-                      </label>
-                      <input
-                        type="text"
-                        {...register('startChecklist.workOrderNumber')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        disabled={mode === 'view'}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Pallet Number
-                      </label>
-                      <input
-                        type="text"
-                        {...register('startChecklist.palletNumber')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        disabled={mode === 'view'}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Part Number
-                      </label>
-                      <input
-                        type="text"
-                        {...register('startChecklist.partNumber')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        disabled={mode === 'view'}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        CNC Program Number
-                      </label>
-                      <input
-                        type="text"
-                        {...register('startChecklist.programNumber')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        disabled={mode === 'view'}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Starting Block Number
-                      </label>
-                      <input
-                        type="text"
-                        {...register('startChecklist.startingBlockNumber')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        disabled={mode === 'view'}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tool Number
-                      </label>
-                      <input
-                        type="text"
-                        {...register('startChecklist.toolNumber')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        disabled={mode === 'view'}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tools Requiring Attention (comma-separated)
-                      </label>
-                      <input
-                        type="text"
-                        {...register('startChecklist.toolsRequiringAttention')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        disabled={mode === 'view'}
-                        placeholder="Tool 1, Tool 2, Tool 3"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tools Needing Immediate Attention (comma-separated)
-                      </label>
-                      <input
-                        type="text"
-                        {...register('startChecklist.immediateAttentionTools')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        disabled={mode === 'view'}
-                        placeholder="Tool 1, Tool 2, Tool 3"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <h4 className="font-medium text-gray-900 mb-3">Safety Checks</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-4">
+                  <div>
+                    <h5 className="font-medium text-gray-900 mb-3">Preparation</h5>
+                    <div className="space-y-2">
                       {Object.entries({
-                        workAreaReviewed: 'Review work area for safety concerns',
-                        measurementDevicesCalibrated: 'Measurement devices calibration verified',
-                        measurementDevicesClean: 'Measurement devices clean and zeroed',
-                        ipcMeasurementUnderstood: 'IPC measurement understanding confirmed',
-                        materialIconGreen: 'Material icon is green',
-                        previousRoutingStepsComplete: 'Previous routing steps completed',
-                        projectManagerNotesReviewed: 'Project manager notes reviewed',
-                        workOrderNotesReviewed: 'Work order notes reviewed',
-                        setupOverviewReviewed: 'Setup overview reviewed',
-                        materialQuantityConfirmed: 'Material quantity confirmed'
+                        wayLubeChecked: 'Way lube check, if less than half top it off',
+                        coolantLevelChecked: 'Coolant level check, if low, fill',
+                        toolboxOrganized: 'All toolbox tools put away in appropriate spots',
+                        deburringToolsOrganized: 'Organize all deburring and measuring tools currently used',
+                        torqueWrenchCondition: 'Torque wrench and hammer in good condition and hanging in their spot',
+                        setupToolsStored: 'If in middle of setup, put away all finished items'
                       }).map(([key, label]) => (
                         <label key={key} className="flex items-center gap-2">
                           <input
                             type="checkbox"
-                            {...register(`startChecklist.safetyChecks.${key}` as any)}
+                            {...register(`endCleanup.preparationChecks.${key}` as any)}
                             disabled={mode === 'view'}
                             className="h-4 w-4 rounded border-gray-300"
                           />
@@ -551,95 +488,122 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="mt-4">
+                  <div>
+                    <h5 className="font-medium text-gray-900 mb-3">Clean</h5>
+                    <div className="space-y-2">
+                      {Object.entries({
+                        dirtyRagsDisposed: 'Pick up all dirty rags and dispose properly',
+                        chipBarrelEmptied: 'Empty and reposition chip barrel, ensure proper material separation',
+                        coolantDrainsCleaned: 'Clean coolant drains inside machine and empty auger',
+                        coolantScreenCleaned: 'Clean screen underneath coolant drain in tank',
+                        floorMatCleaned: 'Shake out floor mat and clean underneath',
+                        toolsStored: 'Put away all tool holders and tools not being used',
+                        areaSweptMopped: 'Sweep and/or mop area'
+                      }).map(([key, label]) => (
+                        <label key={key} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            {...register(`endCleanup.cleaningChecks.${key}` as any)}
+                            disabled={mode === 'view'}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                          <span className="text-sm text-gray-700">{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Notes
+                      Cleanup Notes
                     </label>
                     <textarea
-                      {...register('startChecklist.notes')}
+                      {...register('endCleanup.notes')}
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                     />
                   </div>
                 </div>
-
-                {/* End of Shift Cleanup */}
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                    <ClipboardList className="h-5 w-5 mr-2 text-warning-600" />
-                    End of Shift Cleanup
-                  </h3>
-
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-3">Preparation</h4>
-                      <div className="space-y-2">
-                        {Object.entries({
-                          wayLubeChecked: 'Way lube check, if less than half top it off',
-                          coolantLevelChecked: 'Coolant level check, if low, fill',
-                          toolboxOrganized: 'All toolbox tools put away in appropriate spots',
-                          deburringToolsOrganized: 'Organize all deburring and measuring tools currently used',
-                          torqueWrenchCondition: 'Torque wrench and hammer in good condition and hanging in their spot',
-                          setupToolsStored: 'If in middle of setup, put away all finished items'
-                        }).map(([key, label]) => (
-                          <label key={key} className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              {...register(`endCleanup.preparationChecks.${key}` as any)}
-                              disabled={mode === 'view'}
-                              className="h-4 w-4 rounded border-gray-300"
-                            />
-                            <span className="text-sm text-gray-700">{label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-3">Clean</h4>
-                      <div className="space-y-2">
-                        {Object.entries({
-                          dirtyRagsDisposed: 'Pick up all dirty rags and dispose properly',
-                          chipBarrelEmptied: 'Empty and reposition chip barrel, ensure proper material separation',
-                          coolantDrainsCleaned: 'Clean coolant drains inside machine and empty auger',
-                          coolantScreenCleaned: 'Clean screen underneath coolant drain in tank',
-                          floorMatCleaned: 'Shake out floor mat and clean underneath',
-                          toolsStored: 'Put away all tool holders and tools not being used',
-                          areaSweptMopped: 'Sweep and/or mop area'
-                        }).map(([key, label]) => (
-                          <label key={key} className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              {...register(`endCleanup.cleaningChecks.${key}` as any)}
-                              disabled={mode === 'view'}
-                              className="h-4 w-4 rounded border-gray-300"
-                            />
-                            <span className="text-sm text-gray-700">{label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Notes
-                      </label>
-                      <textarea
-                        {...register('endCleanup.notes')}
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        disabled={mode === 'view'}
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
-            )}
+            </div>
 
-            {activeTab === 'time' && task && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Time Tracking</h3>
+            {/* Assigned Workers */}
+            <div className="border-t border-gray-200 pt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Assigned Workers
+              </label>
+              
+              {mode !== 'view' && (
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={manualWorkerName}
+                    onChange={(e) => setManualWorkerName(e.target.value)}
+                    placeholder="Enter worker name"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (manualWorkerName.trim()) {
+                        const currentShiftId = task?.shiftId || shiftId;
+                        if (currentShiftId) {
+                          const workerId = addManualWorker(manualWorkerName.trim(), currentShiftId);
+                          const currentWorkers = watch('assignedWorkers') || [];
+                          setValue('assignedWorkers', [...currentWorkers, workerId]);
+                          setManualWorkerName('');
+                        }
+                      }
+                    }}
+                    disabled={!manualWorkerName.trim()}
+                    className="px-3 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+              
+              <div className="border border-gray-300 rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
+                {workers.map(worker => (
+                  <div key={worker.id} className="flex items-center justify-between">
+                    <label className="flex items-center flex-1">
+                      <input
+                        type="checkbox"
+                        value={worker.id}
+                        {...register('assignedWorkers')}
+                        disabled={mode === 'view'}
+                        className="mr-2"
+                      />
+                      <span>
+                        {worker.name} ({worker.role})
+                        {worker.isManual && <span className="ml-1 text-sm text-gray-500">(Manual)</span>}
+                      </span>
+                    </label>
+                    {mode !== 'view' && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteWorker(worker.id)}
+                        className="p-1 text-error-600 hover:bg-error-50 rounded-md"
+                        title="Delete Worker"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {workers.length === 0 && (
+                  <div className="text-center text-gray-500 py-2">
+                    No workers added yet
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Time Tracking (View Mode Only) */}
+            {mode === 'view' && task && (
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Time Tracking</h3>
                 
                 {task.timeLogs && task.timeLogs.length > 0 ? (
                   <div className="space-y-3">
@@ -681,7 +645,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 )}
 
                 {task.activeTimeLog && (
-                  <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+                  <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 mt-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="font-medium text-primary-800">Timer Running</div>
@@ -703,7 +667,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 {!task.activeTimeLog && task.workers.length > 0 && (
                   <button
                     onClick={() => startTaskTimer(task.id, task.workers[0].id)}
-                    className="px-4 py-2 bg-success-600 text-white rounded-md hover:bg-success-700 flex items-center"
+                    className="px-4 py-2 bg-success-600 text-white rounded-md hover:bg-success-700 flex items-center mt-4"
                   >
                     <Play className="h-4 w-4 mr-2" />
                     Start Timer

@@ -592,10 +592,9 @@ export const useShopStore = create(
         const s1Shift = state.shifts.find(s => s.type === ShiftType.S1);
         if (!s1Shift) return;
         
-        // Calculate next day
+        // Calculate next day using the current task's creation date
         const currentDate = new Date(task.createdAt);
         const nextDay = addDays(currentDate, 1);
-        const nextDayString = format(nextDay, 'yyyy-MM-dd');
         
         set((state) => ({
           tasks: state.tasks.map((t) =>
@@ -604,7 +603,7 @@ export const useShopStore = create(
                   ...t,
                   shiftId: s1Shift.id,
                   status: TaskStatus.PENDING,
-                  createdAt: `${nextDayString}T${t.createdAt.split('T')[1]}`,
+                  createdAt: nextDay.toISOString(),
                   updatedAt: new Date().toISOString(),
                   carriedOverFromTaskId: taskId // Mark as carried over
                 }

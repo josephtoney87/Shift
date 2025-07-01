@@ -123,6 +123,14 @@ interface ShopState {
   createEndOfShiftCleanup: (data: any) => void;
   getCarriedOverTasks: (date: string) => Task[];
   
+  // Checklist status functions
+  isStartChecklistComplete: (shiftId: string, date: string) => boolean;
+  isEndCleanupComplete: (shiftId: string, date: string) => boolean;
+  acknowledgeStartChecklist: (shiftId: string, date: string, workerId: string) => void;
+  acknowledgeEndCleanup: (shiftId: string, date: string, workerId: string) => void;
+  getStartChecklistAcknowledgments: (shiftId: string, date: string) => string[];
+  getEndCleanupAcknowledgments: (shiftId: string, date: string) => string[];
+  
   // Print
   printTask: (taskId: string) => void;
 }
@@ -921,6 +929,65 @@ export const useShopStore = create(
           console.error('Failed to save end cleanup:', error);
           get().markPendingChange(`end-cleanup-${key}`);
         });
+      },
+
+      // Checklist status functions
+      isStartChecklistComplete: (shiftId: string, date: string) => {
+        const key = `${shiftId}-${date}`;
+        const status = get().startChecklistStatus[key];
+        return !!status?.completedAt;
+      },
+
+      isEndCleanupComplete: (shiftId: string, date: string) => {
+        const key = `${shiftId}-${date}`;
+        const status = get().endCleanupStatus[key];
+        return !!status?.completedAt;
+      },
+
+      acknowledgeStartChecklist: (shiftId: string, date: string, workerId: string) => {
+        const key = `${shiftId}-${date}`;
+        set((state) => ({
+          startChecklistStatus: {
+            ...state.startChecklistStatus,
+            [key]: {
+              ...state.startChecklistStatus[key],
+              shiftId,
+              date,
+              acknowledgedWorkers: [
+                ...(state.startChecklistStatus[key]?.acknowledgedWorkers || []),
+                workerId
+              ].filter((id, index, arr) => arr.indexOf(id) === index) // Remove duplicates
+            }
+          }
+        }));
+      },
+
+      acknowledgeEndCleanup: (shiftId: string, date: string, workerId: string) => {
+        const key = `${shiftId}-${date}`;
+        set((state) => ({
+          endCleanupStatus: {
+            ...state.endCleanupStatus,
+            [key]: {
+              ...state.endCleanupStatus[key],
+              shiftId,
+              date,
+              acknowledgedWorkers: [
+                ...(state.endCleanupStatus[key]?.acknowledgedWorkers || []),
+                workerId
+              ].filter((id, index, arr) => arr.indexOf(id) === index) // Remove duplicates
+            }
+          }
+        }));
+      },
+
+      getStartChecklistAcknowledgments: (shiftId: string, date: string) => {
+        const key = `${shiftId}-${date}`;
+        return get().startChecklistStatus[key]?.acknowledgedWorkers || [];
+      },
+
+      getEndCleanupAcknowledgments: (shiftId: string, date: string) => {
+        const key = `${shiftId}-${date}`;
+        return get().endCleanupStatus[key]?.acknowledgedWorkers || [];
       },
 
       getCarriedOverTasks: (date: string) => {

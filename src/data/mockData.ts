@@ -8,7 +8,6 @@ import {
   TaskStatus, 
   TaskPriority, 
   TaskNote,
-  TaskTimeLog, 
   ShiftReport,
   User
 } from '../types';
@@ -129,9 +128,6 @@ export const mockTasks: Task[] = [];
 
 // Empty initial task notes array
 export const mockTaskNotes: TaskNote[] = [];
-
-// Empty initial time logs array
-export const mockTaskTimeLogs: TaskTimeLog[] = [];
 
 // Empty initial shift reports array
 export const mockShiftReports: ShiftReport[] = [];

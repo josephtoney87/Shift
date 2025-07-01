@@ -3,16 +3,16 @@ import { persist } from 'zustand/middleware';
 import { format, addDays, parseISO } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { 
-  Shift, Worker, Part, Task, TaskNote, TaskTimeLog, ShiftReport, User,
+  Shift, Worker, Part, Task, TaskNote, ShiftReport, User,
   TaskStatus, TaskPriority, WorkerRole, ShiftType, ViewMode,
   StartOfShiftChecklist, EndOfShiftCleanup
 } from '../types';
-import { mockShifts, mockWorkers, mockParts, mockTasks, mockTaskNotes, mockTaskTimeLogs, mockShiftReports, mockUsers } from '../data/mockData';
+import { mockShifts, mockWorkers, mockParts, mockTasks, mockTaskNotes, mockShiftReports, mockUsers } from '../data/mockData';
 import { persistenceService } from '../services/persistenceService';
 import { realtimeService } from '../services/realtimeService';
 import { hasValidCredentials } from '../services/supabase';
 import {
-  saveShift, saveWorker, savePart, saveTask, saveTaskNote, saveTimeLog,
+  saveShift, saveWorker, savePart, saveTask, saveTaskNote,
   deleteShift as dbDeleteShift, deleteWorker as dbDeleteWorker, deleteTask as dbDeleteTask,
   saveStartChecklist, saveEndCleanup, syncAllData, loadAllCloudData
 } from '../services/supabaseOperations';
@@ -32,7 +32,6 @@ interface ShopState {
   parts: Part[];
   tasks: Task[];
   taskNotes: TaskNote[];
-  taskTimeLogs: TaskTimeLog[];
   shiftReports: ShiftReport[];
   users: User[];
   startChecklists: StartOfShiftChecklist[];
@@ -148,7 +147,6 @@ export const useShopStore = create(
       parts: mockParts,
       tasks: mockTasks,
       taskNotes: mockTaskNotes,
-      taskTimeLogs: mockTaskTimeLogs,
       shiftReports: mockShiftReports,
       users: mockUsers,
       startChecklists: [],
@@ -234,8 +232,7 @@ export const useShopStore = create(
             workers: state.workers,
             parts: state.parts,
             tasks: state.tasks,
-            taskNotes: state.taskNotes,
-            taskTimeLogs: state.taskTimeLogs
+            taskNotes: state.taskNotes
           });
           
           // Then sync pending operations
@@ -323,8 +320,7 @@ export const useShopStore = create(
           workers: state.workers,
           parts: state.parts,
           tasks: state.tasks,
-          taskNotes: state.taskNotes,
-          taskTimeLogs: state.taskTimeLogs
+          taskNotes: state.taskNotes
         });
 
         if (success) {
@@ -742,19 +738,15 @@ export const useShopStore = create(
             };
           });
           
-        const idleEvents: any[] = []; // No time tracking, so no idle events
-          
         const handoverReport = {
           id: uuidv4(),
           shiftId,
           date,
           completedTasks,
           carriedOverTasks,
-          idleEvents,
           metrics: {
             totalCompletedTasks: completedTasks.length,
             totalCarriedOver: carriedOverTasks.length,
-            totalIdleTime: 0,
             shiftUtilization: 1
           },
           notes: '',
@@ -848,24 +840,50 @@ export const useShopStore = create(
         return tasks;
       },
       
-      // Simplified checklist functions - no acknowledgment required
+      // Real-time saving checklist functions
       createStartOfShiftChecklist: (data) => {
         const { shiftId, date } = data;
         const key = `${shiftId}-${date}`;
         
+        // Create checklist record with real-time saving
+        const checklistRecord: StartOfShiftChecklist = {
+          id: uuidv4(),
+          shiftId,
+          date,
+          workOrderNumber: data.workOrderNumber || '',
+          palletNumber: data.palletNumber || '',
+          partNumber: data.partNumber || '',
+          programNumber: data.programNumber || '',
+          startingBlockNumber: data.startingBlockNumber || '',
+          toolNumber: data.toolNumber || '',
+          toolsRequiringAttention: data.toolsRequiringAttention || [],
+          immediateAttentionTools: data.immediateAttentionTools || [],
+          notes: data.notes || '',
+          safetyChecks: data.safetyChecks || {},
+          completedBy: data.completedBy || data.modifiedBy || 'unknown',
+          completedAt: new Date().toISOString(),
+          lastModified: data.lastModified || new Date().toISOString(),
+          modifiedBy: data.modifiedBy || 'unknown'
+        };
+        
         set((state) => ({
+          startChecklists: [
+            ...state.startChecklists.filter(c => c.shiftId !== shiftId || c.date !== date),
+            checklistRecord
+          ],
           startChecklistStatus: {
             ...state.startChecklistStatus,
             [key]: {
               shiftId,
               date,
               acknowledgedWorkers: [],
-              completedAt: new Date().toISOString(),
-              completedBy: state.currentUser?.id
+              completedAt: checklistRecord.completedAt,
+              completedBy: checklistRecord.completedBy
             }
           }
         }));
         
+        // Save to persistence layer for real-time sync
         saveStartChecklist(data).catch(error => {
           console.error('Failed to save start checklist:', error);
           get().markPendingChange(`start-checklist-${key}`);
@@ -876,19 +894,38 @@ export const useShopStore = create(
         const { shiftId, date } = data;
         const key = `${shiftId}-${date}`;
         
+        // Create cleanup record with real-time saving
+        const cleanupRecord: EndOfShiftCleanup = {
+          id: uuidv4(),
+          shiftId,
+          date,
+          preparationChecks: data.preparationChecks || {},
+          cleaningChecks: data.cleaningChecks || {},
+          notes: data.notes || '',
+          completedBy: data.completedBy || data.modifiedBy || 'unknown',
+          completedAt: new Date().toISOString(),
+          lastModified: data.lastModified || new Date().toISOString(),
+          modifiedBy: data.modifiedBy || 'unknown'
+        };
+        
         set((state) => ({
+          endCleanups: [
+            ...state.endCleanups.filter(c => c.shiftId !== shiftId || c.date !== date),
+            cleanupRecord
+          ],
           endCleanupStatus: {
             ...state.endCleanupStatus,
             [key]: {
               shiftId,
               date,
               acknowledgedWorkers: [],
-              completedAt: new Date().toISOString(),
-              completedBy: state.currentUser?.id
+              completedAt: cleanupRecord.completedAt,
+              completedBy: cleanupRecord.completedBy
             }
           }
         }));
         
+        // Save to persistence layer for real-time sync
         saveEndCleanup(data).catch(error => {
           console.error('Failed to save end cleanup:', error);
           get().markPendingChange(`end-cleanup-${key}`);
@@ -1026,7 +1063,6 @@ export const useShopStore = create(
         parts: state.parts,
         tasks: state.tasks,
         taskNotes: state.taskNotes,
-        taskTimeLogs: state.taskTimeLogs,
         shiftReports: state.shiftReports,
         users: state.users,
         currentUser: state.currentUser,

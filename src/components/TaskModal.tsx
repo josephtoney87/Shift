@@ -70,7 +70,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
     deleteWorker,
     createStartOfShiftChecklist,
     createEndOfShiftCleanup,
-    moveTaskToNextDay
+    moveTaskToNextDay,
+    currentUser
   } = useShopStore();
   
   const [manualWorkerName, setManualWorkerName] = useState('');
@@ -133,6 +134,47 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
   });
 
+  // Real-time saving for checklist changes
+  const handleChecklistChange = (section: 'startChecklist' | 'endCleanup', field: string, value: any) => {
+    setValue(`${section}.${field}` as any, value);
+    
+    // Auto-save checklist data in real-time
+    if (mode === 'create' || mode === 'edit') {
+      const currentData = watch();
+      
+      if (section === 'startChecklist' && currentData.startChecklist) {
+        const checklistData = {
+          ...currentData.startChecklist,
+          [field]: value,
+          shiftId: shiftId || task?.shiftId,
+          date: selectedDate,
+          lastModified: new Date().toISOString(),
+          modifiedBy: currentUser?.id || 'unknown'
+        };
+        
+        // Save immediately to make it visible to all team members
+        createStartOfShiftChecklist(checklistData);
+      } else if (section === 'endCleanup' && currentData.endCleanup) {
+        const cleanupData = {
+          ...currentData.endCleanup,
+          [field]: value,
+          shiftId: shiftId || task?.shiftId,
+          date: selectedDate,
+          lastModified: new Date().toISOString(),
+          modifiedBy: currentUser?.id || 'unknown'
+        };
+        
+        // Save immediately to make it visible to all team members
+        createEndOfShiftCleanup(cleanupData);
+      }
+    }
+  };
+
+  // Real-time saving for notes
+  const handleNotesChange = (section: 'startChecklist' | 'endCleanup', value: string) => {
+    handleChecklistChange(section, 'notes', value);
+  };
+
   useEffect(() => {
     if (task && (mode === 'view' || mode === 'edit')) {
       setValue('workOrderNumber', task.workOrderNumber);
@@ -175,7 +217,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
         createdAt: selectedDate
       });
 
-      // Save checklists if provided
+      // Save checklists if provided (they're already saved in real-time)
       if (data.startChecklist && Object.values(data.startChecklist.safetyChecks).some(Boolean)) {
         createStartOfShiftChecklist({
           ...data.startChecklist,
@@ -183,7 +225,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
           immediateAttentionTools: data.startChecklist.immediateAttentionTools.split(',').map(t => t.trim()).filter(Boolean),
           shiftId,
           date: selectedDate,
-          completedBy: 'current-worker'
+          completedBy: currentUser?.id || 'unknown',
+          lastModified: new Date().toISOString(),
+          modifiedBy: currentUser?.id || 'unknown'
         });
       }
 
@@ -192,7 +236,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
           ...data.endCleanup,
           shiftId,
           date: selectedDate,
-          completedBy: 'current-worker'
+          completedBy: currentUser?.id || 'unknown',
+          lastModified: new Date().toISOString(),
+          modifiedBy: currentUser?.id || 'unknown'
         });
       }
       
@@ -391,6 +437,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     <input
                       type="text"
                       {...register('startChecklist.workOrderNumber')}
+                      onChange={(e) => handleChecklistChange('startChecklist', 'workOrderNumber', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                     />
@@ -402,6 +449,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     <input
                       type="text"
                       {...register('startChecklist.palletNumber')}
+                      onChange={(e) => handleChecklistChange('startChecklist', 'palletNumber', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                     />
@@ -413,6 +461,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     <input
                       type="text"
                       {...register('startChecklist.partNumber')}
+                      onChange={(e) => handleChecklistChange('startChecklist', 'partNumber', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                     />
@@ -424,6 +473,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     <input
                       type="text"
                       {...register('startChecklist.programNumber')}
+                      onChange={(e) => handleChecklistChange('startChecklist', 'programNumber', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                     />
@@ -435,6 +485,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     <input
                       type="text"
                       {...register('startChecklist.startingBlockNumber')}
+                      onChange={(e) => handleChecklistChange('startChecklist', 'startingBlockNumber', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                     />
@@ -446,6 +497,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     <input
                       type="text"
                       {...register('startChecklist.toolNumber')}
+                      onChange={(e) => handleChecklistChange('startChecklist', 'toolNumber', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                     />
@@ -460,6 +512,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     <input
                       type="text"
                       {...register('startChecklist.toolsRequiringAttention')}
+                      onChange={(e) => handleChecklistChange('startChecklist', 'toolsRequiringAttention', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                       placeholder="Tool 1, Tool 2, Tool 3"
@@ -472,6 +525,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     <input
                       type="text"
                       {...register('startChecklist.immediateAttentionTools')}
+                      onChange={(e) => handleChecklistChange('startChecklist', 'immediateAttentionTools', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}
                       placeholder="Tool 1, Tool 2, Tool 3"
@@ -498,6 +552,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                         <input
                           type="checkbox"
                           {...register(`startChecklist.safetyChecks.${key}` as any)}
+                          onChange={(e) => handleChecklistChange('startChecklist', `safetyChecks.${key}`, e.target.checked)}
                           disabled={mode === 'view'}
                           className="h-4 w-4 rounded border-gray-300"
                         />
@@ -513,6 +568,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   </label>
                   <textarea
                     {...register('startChecklist.notes')}
+                    onChange={(e) => handleNotesChange('startChecklist', e.target.value)}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     disabled={mode === 'view'}
@@ -543,6 +599,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                           <input
                             type="checkbox"
                             {...register(`endCleanup.preparationChecks.${key}` as any)}
+                            onChange={(e) => handleChecklistChange('endCleanup', `preparationChecks.${key}`, e.target.checked)}
                             disabled={mode === 'view'}
                             className="h-4 w-4 rounded border-gray-300"
                           />
@@ -568,6 +625,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                           <input
                             type="checkbox"
                             {...register(`endCleanup.cleaningChecks.${key}` as any)}
+                            onChange={(e) => handleChecklistChange('endCleanup', `cleaningChecks.${key}`, e.target.checked)}
                             disabled={mode === 'view'}
                             className="h-4 w-4 rounded border-gray-300"
                           />
@@ -583,6 +641,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     </label>
                     <textarea
                       {...register('endCleanup.notes')}
+                      onChange={(e) => handleNotesChange('endCleanup', e.target.value)}
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       disabled={mode === 'view'}

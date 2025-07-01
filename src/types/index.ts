@@ -78,19 +78,6 @@ export interface Task {
   createdBy?: string; // User ID who created the task
 }
 
-export interface TaskTimeLog {
-  id: string;
-  taskId: string;
-  workerId: string;
-  startTime: string;
-  endTime?: string;
-  duration?: number;
-  status?: 'running' | 'paused' | 'stopped';
-  pausedAt?: string;
-  parentLogId?: string;
-  autoPaused?: boolean;
-}
-
 export interface TaskNote {
   id: string;
   taskId: string;
@@ -119,17 +106,9 @@ export interface HandoverReport {
     reason: string;
     progress: number;
   }[];
-  idleEvents: {
-    taskId: string;
-    startTime: string;
-    endTime: string;
-    duration: number;
-    workerId: string;
-  }[];
   metrics: {
     totalCompletedTasks: number;
     totalCarriedOver: number;
-    totalIdleTime: number;
     shiftUtilization: number;
   };
   notes: string;
@@ -166,6 +145,8 @@ export interface StartOfShiftChecklist {
   safetyChecks: Record<string, boolean>;
   completedBy: string;
   completedAt: string;
+  lastModified: string;
+  modifiedBy: string;
 }
 
 export interface EndOfShiftCleanup {
@@ -177,6 +158,8 @@ export interface EndOfShiftCleanup {
   notes: string;
   completedBy: string;
   completedAt: string;
+  lastModified: string;
+  modifiedBy: string;
 }
 
 export interface CalibrationRecord {
